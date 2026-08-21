@@ -19,6 +19,15 @@ function App() {
       } catch (e) {
         console.error("Failed to parse cached records");
       }
+    } else {
+      // Fallback: load migrated old data on first run
+      fetch('/data.json')
+        .then(res => res.json())
+        .then(data => {
+          setRecords(data);
+          localStorage.setItem('brush_records', JSON.stringify(data));
+        })
+        .catch(console.error);
     }
   }, []);
 
