@@ -377,7 +377,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
 
       <div className="relative rounded-b-[3rem] shadow-lg overflow-hidden transition-all duration-700">
         <div 
-          className="absolute inset-0 z-0 bg-cover bg-center grayscale mix-blend-multiply opacity-20"
+          className="absolute inset-0 z-0 bg-cover bg-center grayscale mix-blend-multiply opacity-80"
           style={activeBgStyle}
         />
         <div className={`absolute inset-0 z-10 bg-gradient-to-br ${currentTheme.header} opacity-90`} />
