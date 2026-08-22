@@ -194,6 +194,7 @@ function App() {
           userName={profile.name} 
           themeIndex={themeIndex} 
           syncStatus={syncStatus} 
+          onLogin={login}
         />
       )}
 
