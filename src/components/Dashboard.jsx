@@ -7,8 +7,52 @@ import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw, His
 import { THEMES } from '../utils/themes';
 import { ENCOURAGING_PHRASES } from '../utils/phrases';
 
-export default function Dashboard({ records, userName, themeIndex = 0, phraseIndex = 0, syncStatus, onLogin, customDateRange, customPeriods, cloudSyncEnabled = true }) {
+export default function Dashboard({ records, userName, themeIndex = 0, phraseIndex = 0, syncStatus, onLogin, customDateRange, customPeriods, cloudSyncEnabled = true, unlockedBackgrounds = ['bg1'] }) {
   const [timeframe, setTimeframe] = useState('Week');
+
+  const { globalCurrentStreak, activeBackground } = useMemo(() => {
+    let streak = 0;
+    if (records && records.length > 0) {
+       const allDays = new Set(records.map(r => r.timestamp.split('T')[0]));
+       let curr = new Date();
+       const todayStr = curr.toISOString().split('T')[0];
+       curr.setDate(curr.getDate() - 1);
+       const yesterdayStr = curr.toISOString().split('T')[0];
+       
+       let activeDate = new Date();
+       if (allDays.has(todayStr)) {
+          // brushed today
+       } else if (allDays.has(yesterdayStr)) {
+          activeDate.setDate(activeDate.getDate() - 1);
+       } else {
+          activeDate = null;
+       }
+       
+       if (activeDate) {
+          while (true) {
+             const dStr = activeDate.toISOString().split('T')[0];
+             if (allDays.has(dStr)) {
+                streak++;
+                activeDate.setDate(activeDate.getDate() - 1);
+             } else {
+                break;
+             }
+          }
+       }
+    }
+    
+    let activeBg = 'bg1';
+    if (streak >= 7 && unlockedBackgrounds.length > 0) {
+       const now = new Date();
+       const start = new Date(now.getFullYear(), 0, 0);
+       const diff = (now - start) + ((start.getTimezoneOffset() - now.getTimezoneOffset()) * 60 * 1000);
+       const oneDay = 1000 * 60 * 60 * 24;
+       const dayOfYear = Math.floor(diff / oneDay);
+       activeBg = unlockedBackgrounds[dayOfYear % unlockedBackgrounds.length];
+    }
+    
+    return { globalCurrentStreak: streak, activeBackground: activeBg };
+  }, [records, unlockedBackgrounds]);
 
   const stats = useMemo(() => {
     if (!records || records.length === 0) return null;
@@ -358,7 +402,14 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
         </defs>
       </svg>
 
-      <div className={`bg-gradient-to-br ${currentTheme.header} text-white rounded-b-[3rem] px-8 pt-12 pb-16 shadow-lg relative transition-all duration-700`}>
+      <div className="relative rounded-b-[3rem] shadow-lg overflow-hidden transition-all duration-700">
+        <div 
+          className="absolute inset-0 z-0 bg-cover bg-center grayscale mix-blend-multiply opacity-20"
+          style={{ backgroundImage: `url('/backgrounds/${activeBackground}.jpg')` }}
+        />
+        <div className={`absolute inset-0 z-10 bg-gradient-to-br ${currentTheme.header} opacity-90`} />
+        
+        <div className="relative z-20 px-8 pt-12 pb-16 text-white">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-3xl font-light mb-1">Hi {userName || 'There'}</h1>
@@ -385,6 +436,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
           </div>
         </div>
       </div>
+    </div>
 
       <div className="flex justify-center gap-6 mt-6 text-sm font-medium text-gray-400">
         {['Week', 'Month', 'All Time', 'Custom'].map(t => (

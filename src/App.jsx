@@ -19,6 +19,7 @@ function App() {
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
   const [customPeriods, setCustomPeriods] = useState([]);
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(true);
+  const [unlockedBackgrounds, setUnlockedBackgrounds] = useState(['bg1']);
 
   useEffect(() => {
     const cachedProfile = localStorage.getItem('brush_profile');
@@ -36,6 +37,24 @@ function App() {
 
     const cachedPeriods = localStorage.getItem('brush_custom_periods');
     if (cachedPeriods) setCustomPeriods(JSON.parse(cachedPeriods));
+
+    const cachedBackgrounds = localStorage.getItem('brush_unlocked_bgs');
+    if (cachedBackgrounds) setUnlockedBackgrounds(JSON.parse(cachedBackgrounds));
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const unlock = urlParams.get('unlock');
+    if (unlock && /^bg[1-6]$/.test(unlock)) {
+      setUnlockedBackgrounds(prev => {
+        if (!prev.includes(unlock)) {
+          const next = [...prev, unlock];
+          localStorage.setItem('brush_unlocked_bgs', JSON.stringify(next));
+          alert(`🎉 Congratulations! You've unlocked ${unlock}!`);
+          return next;
+        }
+        return prev;
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     const cachedSyncEnabled = localStorage.getItem('brush_sync_enabled');
     if (cachedSyncEnabled !== null) setCloudSyncEnabled(cachedSyncEnabled === 'true');
@@ -78,11 +97,15 @@ function App() {
     if (!cloudSyncEnabled || !accessToken || !driveFileId) return;
     setSyncStatus('Syncing');
     try {
+      const bgsStr = localStorage.getItem('brush_unlocked_bgs');
+      const bgs = bgsStr ? JSON.parse(bgsStr) : ['bg1'];
+      
       const payload = {
         records: recs,
         settings: {
           customDateRange: dates,
-          customPeriods: periods
+          customPeriods: periods,
+          unlockedBackgrounds: bgs
         }
       };
       await writeDriveFile(accessToken, driveFileId, payload);
@@ -169,6 +192,9 @@ function App() {
 
         let nextDates = customDateRange;
         let nextPeriods = customPeriods;
+        
+        const localBgsStr = localStorage.getItem('brush_unlocked_bgs');
+        let nextBackgrounds = localBgsStr ? JSON.parse(localBgsStr) : ['bg1'];
 
         if (remoteSettings) {
             if (remoteSettings.customDateRange) {
@@ -181,6 +207,12 @@ function App() {
                 setCustomPeriods(nextPeriods);
                 localStorage.setItem('brush_custom_periods', JSON.stringify(nextPeriods));
             }
+            if (remoteSettings.unlockedBackgrounds) {
+                const combinedBgs = Array.from(new Set([...nextBackgrounds, ...remoteSettings.unlockedBackgrounds]));
+                nextBackgrounds = combinedBgs;
+                setUnlockedBackgrounds(combinedBgs);
+                localStorage.setItem('brush_unlocked_bgs', JSON.stringify(combinedBgs));
+            }
         }
 
         setRecords(mergedData);
@@ -190,7 +222,8 @@ function App() {
             records: mergedData,
             settings: {
                 customDateRange: nextDates,
-                customPeriods: nextPeriods
+                customPeriods: nextPeriods,
+                unlockedBackgrounds: nextBackgrounds
             }
         };
         await writeDriveFile(accessToken, fileId, newPayload);
@@ -288,6 +321,7 @@ function App() {
           customDateRange={customDateRange}
           customPeriods={customPeriods}
           cloudSyncEnabled={cloudSyncEnabled}
+          unlockedBackgrounds={unlockedBackgrounds}
         />
       )}
 
