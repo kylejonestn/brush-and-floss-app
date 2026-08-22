@@ -113,18 +113,8 @@ function App() {
       try {
         setRecords(JSON.parse(cachedRecords));
       } catch (e) {
-        console.error("Failed to parse cached records");
+        console.error("Failed to parse cached records", e);
       }
-    } else {
-      fetch('/brush-and-floss-app/data.json')
-        .then(res => res.json())
-        .then(data => {
-          if(Array.isArray(data)) {
-             setRecords(data);
-             localStorage.setItem('brush_records', JSON.stringify(data));
-          }
-        })
-        .catch(console.error);
     }
   }, []);
 
