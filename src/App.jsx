@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin, googleLogout } from '@react-oauth/google';
 import html2pdf from 'html2pdf.js';
 import Dashboard from './components/Dashboard';
 import Report from './components/Report';
+import Settings from './components/Settings';
 import { initDriveSync, readDriveFile, writeDriveFile } from './utils/driveSync';
 
 function App() {
@@ -10,6 +11,7 @@ function App() {
   const [accessToken, setAccessToken] = useState(null);
   const [driveFileId, setDriveFileId] = useState(null);
   const [syncStatus, setSyncStatus] = useState('Not Synced');
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const cached = localStorage.getItem('brush_records');
@@ -40,6 +42,13 @@ function App() {
     onError: (error) => console.log('Login Failed:', error)
   });
 
+  const logout = () => {
+    googleLogout();
+    setAccessToken(null);
+    setDriveFileId(null);
+    setSyncStatus('Not Synced');
+  };
+
   useEffect(() => {
     if (!accessToken) return;
 
@@ -50,7 +59,6 @@ function App() {
         setDriveFileId(fileId);
 
         const remoteData = await readDriveFile(accessToken, fileId) || [];
-        
         const localDataStr = localStorage.getItem('brush_records');
         const localData = localDataStr ? JSON.parse(localDataStr) : [];
         
@@ -75,27 +83,39 @@ function App() {
     syncData();
   }, [accessToken]);
 
-  const handleLogBrush = async () => {
-    const newRecord = {
-      timestamp: new Date().toISOString(),
-      action: 'brush_and_floss'
-    };
+  const mergeAndSaveData = async (newRecordsToMerge) => {
+    const mergedMap = new Map();
+    [...records, ...newRecordsToMerge].forEach(r => mergedMap.set(r.timestamp, r));
     
-    const newRecords = [...records, newRecord];
-    setRecords(newRecords);
-    
-    localStorage.setItem('brush_records', JSON.stringify(newRecords));
+    const mergedData = Array.from(mergedMap.values()).sort((a, b) => 
+      new Date(a.timestamp) - new Date(b.timestamp)
+    );
+
+    setRecords(mergedData);
+    localStorage.setItem('brush_records', JSON.stringify(mergedData));
     
     if (accessToken && driveFileId) {
       setSyncStatus('Syncing');
       try {
-        await writeDriveFile(accessToken, driveFileId, newRecords);
+        await writeDriveFile(accessToken, driveFileId, mergedData);
         setSyncStatus('Synced');
       } catch (e) {
         console.error("Failed to push to Drive", e);
         setSyncStatus('Error syncing');
       }
     }
+  };
+
+  const handleLogBrush = () => {
+    const newRecord = {
+      timestamp: new Date().toISOString(),
+      action: 'brush_and_floss'
+    };
+    mergeAndSaveData([newRecord]);
+  };
+
+  const handleImportData = (importedRecords) => {
+    mergeAndSaveData(importedRecords);
   };
 
   const exportPDF = () => {
@@ -112,8 +132,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white font-sans pb-20">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-[#121212] text-white font-sans flex flex-col">
+      <div className="max-w-4xl mx-auto px-4 py-8 flex-grow w-full">
         
         <div className="flex justify-end items-center mb-4">
           <div className="text-sm text-gray-400 mr-4">
@@ -129,20 +149,43 @@ function App() {
           )}
         </div>
 
-        <Dashboard records={records} onLogBrush={handleLogBrush} />
-        
-        <div className="mt-20 border-t border-gray-800 pt-12 relative">
-          <div className="absolute right-0 top-12">
-             <button 
-                onClick={exportPDF}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium text-sm transition-colors"
-             >
-                Export PDF
-             </button>
-          </div>
-          <Report records={records} />
-        </div>
+        {showSettings ? (
+          <Settings 
+            records={records} 
+            accessToken={accessToken} 
+            onLogin={login} 
+            onLogout={logout} 
+            onImportData={handleImportData}
+            onClose={() => setShowSettings(false)}
+          />
+        ) : (
+          <>
+            <Dashboard records={records} onLogBrush={handleLogBrush} />
+            
+            <div className="mt-20 border-t border-gray-800 pt-12 relative">
+              <div className="absolute right-0 top-12">
+                 <button 
+                    onClick={exportPDF}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium text-sm transition-colors"
+                 >
+                    Export PDF
+                 </button>
+              </div>
+              <Report records={records} />
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Footer */}
+      <footer className="w-full text-center py-6 text-gray-500 text-sm border-t border-gray-800">
+        <button 
+          onClick={() => setShowSettings(!showSettings)}
+          className="hover:text-white transition-colors"
+        >
+          {showSettings ? 'Back to Dashboard' : 'Settings & Import Data'}
+        </button>
+      </footer>
     </div>
   );
 }
