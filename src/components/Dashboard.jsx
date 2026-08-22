@@ -6,7 +6,7 @@ import { parseISO, format, differenceInDays, startOfDay, endOfDay, subDays, isTo
 import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw, History } from 'lucide-react';
 import { THEMES } from '../utils/themes';
 
-export default function Dashboard({ records, userName, themeIndex = 0, syncStatus, onLogin, customDateRange }) {
+export default function Dashboard({ records, userName, themeIndex = 0, syncStatus, onLogin, customDateRange, customPeriods }) {
   const [timeframe, setTimeframe] = useState('Week');
 
   const stats = useMemo(() => {
