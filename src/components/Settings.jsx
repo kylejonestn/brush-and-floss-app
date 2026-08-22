@@ -19,6 +19,57 @@ export default function Settings({
   const [manualDate, setManualDate] = useState('');
   const [manualTime, setManualTime] = useState('');
 
+  const [reminderTime1, setReminderTime1] = useState('08:00');
+  const [reminderTime2, setReminderTime2] = useState('21:00');
+
+  const handleCreateReminders = () => {
+    const generateEvent = (time) => {
+      if (!time) return '';
+      const [hours, minutes] = time.split(':');
+      
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      
+      const dtstart = `${yyyy}${mm}${dd}T${hours}${minutes}00`;
+      
+      const endDate = new Date(now);
+      endDate.setHours(parseInt(hours, 10));
+      endDate.setMinutes(parseInt(minutes, 10) + 15);
+      const endHours = String(endDate.getHours()).padStart(2, '0');
+      const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+      const dtend = `${yyyy}${mm}${dd}T${endHours}${endMinutes}00`;
+
+      return `BEGIN:VEVENT
+SUMMARY:🦷 Time to Brush & Floss!
+DESCRIPTION:Keep that streak alive! Log your brush here: https://kylejonestn.github.io/brush-and-floss-app/
+RRULE:FREQ=DAILY
+DTSTART:${dtstart}
+DTEND:${dtend}
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Time to Brush & Floss!
+TRIGGER:-PT0M
+END:VALARM
+END:VEVENT
+`;
+    };
+
+    const icsData = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Brush and Floss App//EN
+${generateEvent(reminderTime1)}${generateEvent(reminderTime2)}END:VCALENDAR`;
+
+    const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.download = 'Brushing_Reminders.ics';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -174,6 +225,41 @@ export default function Settings({
                  </div>
               ))
            )}
+        </div>
+      </div>
+
+      <div className="mb-8 border-b pb-8">
+        <h3 className="text-xl font-semibold mb-3 text-gray-800">Daily Reminders</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Set up daily notifications on your phone using your native calendar app.
+        </p>
+        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4">
+           <div className="flex gap-4 mb-4">
+              <div className="flex-1">
+                 <label className="block text-xs font-medium text-gray-500 mb-1">Morning</label>
+                 <input 
+                    type="time" 
+                    value={reminderTime1} 
+                    onChange={e => setReminderTime1(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2d3a70]"
+                 />
+              </div>
+              <div className="flex-1">
+                 <label className="block text-xs font-medium text-gray-500 mb-1">Evening</label>
+                 <input 
+                    type="time" 
+                    value={reminderTime2} 
+                    onChange={e => setReminderTime2(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2d3a70]"
+                 />
+              </div>
+           </div>
+           <button 
+             onClick={handleCreateReminders}
+             className="w-full bg-[#2d3a70] hover:bg-[#3b4b94] text-white py-2.5 rounded-lg text-sm font-medium transition-colors"
+           >
+              Create Calendar Reminders
+           </button>
         </div>
       </div>
 
