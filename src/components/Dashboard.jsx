@@ -120,10 +120,10 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
     const monthlyData = Object.keys(monthlyMap).map(k => ({ name: k, total: monthlyMap[k] }));
 
     const pieData = [
-      { name: '0x', value: didNotBrush, color: '#e5e7eb' },
-      { name: '1x', value: once, color: '#9ca3af' },
-      { name: '2x', value: twice, color: '#6b7280' },
-      { name: '3x+', value: threeTimes, color: '#374151' }
+      { name: '0x', value: didNotBrush, color: 'url(#pattern-0x)' },
+      { name: '1x', value: once, color: 'url(#pattern-1x)' },
+      { name: '2x', value: twice, color: 'url(#pattern-2x)' },
+      { name: '3x+', value: threeTimes, color: 'url(#pattern-3x)' }
     ].filter(d => d.value > 0);
 
     const goal3xPercent = Math.round((threeTimes / totalDays) * 100) || 0;
@@ -337,7 +337,27 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
 
   return (
     <div className="pb-32 bg-[#f4f7fb] min-h-screen transition-colors duration-500">
-      
+      <svg width="0" height="0" className="absolute pointer-events-none">
+        <defs>
+          <pattern id="pattern-0x" width="6" height="6" patternUnits="userSpaceOnUse">
+            <rect width="6" height="6" fill="#fca5a5" />
+            <circle cx="3" cy="3" r="1.5" fill="#ef4444" />
+          </pattern>
+          <pattern id="pattern-1x" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="6" height="6" fill="#fde047" />
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#eab308" strokeWidth="2" />
+          </pattern>
+          <pattern id="pattern-2x" width="8" height="8" patternUnits="userSpaceOnUse">
+            <rect width="8" height="8" fill="#86efac" />
+            <path d="M 0 0 L 8 8 M 8 0 L 0 8" stroke="#22c55e" strokeWidth="1.5" />
+          </pattern>
+          <pattern id="pattern-3x" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+            <rect width="6" height="6" fill="#93c5fd" />
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#3b82f6" strokeWidth="2" />
+          </pattern>
+        </defs>
+      </svg>
+
       <div className={`bg-gradient-to-br ${currentTheme.header} text-white rounded-b-[3rem] px-8 pt-12 pb-16 shadow-lg relative transition-all duration-700`}>
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -441,10 +461,10 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
                 </div>
                 
                 <div className="w-1/2 pl-2 space-y-2 text-sm">
-                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#374151]"></span>3x</span> <span className="font-semibold">{stats.counts.threeTimes}</span></div>
-                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#6b7280]"></span>2x</span> <span className="font-semibold">{stats.counts.twice}</span></div>
-                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#9ca3af]"></span>1x</span> <span className="font-semibold">{stats.counts.once}</span></div>
-                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#e5e7eb]"></span>0x</span> <span className="font-semibold text-gray-400">{stats.counts.didNotBrush}</span></div>
+                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><svg width="12" height="12" className="rounded-sm shadow-sm"><rect width="12" height="12" fill="url(#pattern-3x)"/></svg>3x+</span> <span className="font-semibold">{stats.counts.threeTimes}</span></div>
+                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><svg width="12" height="12" className="rounded-sm shadow-sm"><rect width="12" height="12" fill="url(#pattern-2x)"/></svg>2x</span> <span className="font-semibold">{stats.counts.twice}</span></div>
+                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><svg width="12" height="12" className="rounded-sm shadow-sm"><rect width="12" height="12" fill="url(#pattern-1x)"/></svg>1x</span> <span className="font-semibold">{stats.counts.once}</span></div>
+                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><svg width="12" height="12" className="rounded-sm shadow-sm"><rect width="12" height="12" fill="url(#pattern-0x)"/></svg>0x</span> <span className="font-semibold text-gray-400">{stats.counts.didNotBrush}</span></div>
                 </div>
               </div>
             </div>
