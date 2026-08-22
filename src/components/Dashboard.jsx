@@ -7,7 +7,7 @@ import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw, His
 import { THEMES } from '../utils/themes';
 import { ENCOURAGING_PHRASES } from '../utils/phrases';
 
-export default function Dashboard({ records, userName, themeIndex = 0, phraseIndex = 0, syncStatus, onLogin, customDateRange, customPeriods }) {
+export default function Dashboard({ records, userName, themeIndex = 0, phraseIndex = 0, syncStatus, onLogin, customDateRange, customPeriods, cloudSyncEnabled = true }) {
   const [timeframe, setTimeframe] = useState('Week');
 
   const stats = useMemo(() => {
