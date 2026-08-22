@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { 
-  BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip 
+  BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis 
 } from 'recharts';
 import { parseISO, format, differenceInDays, startOfDay, subDays, isToday, isYesterday, isAfter } from 'date-fns';
 import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw } from 'lucide-react';
@@ -24,6 +24,12 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
     if (filteredRecords.length === 0) return { empty: true };
 
     const byDay = {};
+    const allByDay = {}; // For the 7-day chart which ignores timeframe filter
+    records.forEach(r => {
+      const dateKey = format(parseISO(r.timestamp), 'yyyy-MM-dd');
+      allByDay[dateKey] = (allByDay[dateKey] || 0) + 1;
+    });
+    
     filteredRecords.forEach(r => {
       const dateKey = format(parseISO(r.timestamp), 'yyyy-MM-dd');
       byDay[dateKey] = (byDay[dateKey] || 0) + 1;
@@ -103,8 +109,19 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
     const goal3xPercent = Math.round((threeTimes / totalDays) * 100) || 0;
     const brushedPercent = Math.round(((totalDays - didNotBrush) / totalDays) * 100) || 0;
 
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const todaysCount = byDay[todayStr] || 0;
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const todaysCount = allByDay[todayStr] || 0;
+
+    // 7-day Bar Chart Data (ignores timeframe so it's always useful context)
+    const weekData = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = subDays(now, i);
+      const dateKey = format(d, 'yyyy-MM-dd');
+      weekData.push({
+        name: format(d, 'EEE').substring(0, 1),
+        value: allByDay[dateKey] || 0
+      });
+    }
 
     const lastRecord = records[records.length - 1]; 
     let lastBrushText = "";
@@ -117,7 +134,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
     }
 
     return { 
-      pieData, monthlyData, maxStreak, todaysCount, 
+      pieData, monthlyData, weekData, maxStreak, todaysCount, 
       totalRecords: filteredRecords.length, lastBrushText,
       mostMissed: { name: dayNames[mostMissed], count: mostMissedCount },
       bestDay: { name: dayNames[bestDay], count: bestDayCount },
@@ -150,7 +167,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
              <RefreshCw size={24} className="text-white/90 animate-spin transition-all duration-300" />
            </div>
          );
-      default: // 'Not Synced' or 'Error syncing'
+      default:
          return (
            <div className="relative flex items-center justify-center w-8 h-8">
              <div className={`absolute inset-0 rounded-full ${currentTheme.nav} animate-ping opacity-75`}></div>
@@ -206,6 +223,30 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       ) : (
         <div className="px-6 mt-8 space-y-6">
           
+          {/* 7-Day Frequency Bar Chart */}
+          <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-gray-500 font-medium text-sm">Recent Activity</h3>
+              <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Last 7 Days</span>
+            </div>
+            <div className="h-32 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.weekData}>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dy={5} />
+                  <Bar dataKey="value" radius={[10, 10, 10, 10]} barSize={16}>
+                    {stats.weekData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.value >= 3 ? '#374151' : (entry.value === 2 ? '#4b5563' : (entry.value === 1 ? '#9ca3af' : '#e5e7eb'))} 
+                      />
+                    ))}
+                  </Bar>
+                  <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-gray-500 font-medium text-sm">Habit Breakdown</h3>
