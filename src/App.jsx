@@ -72,8 +72,11 @@ function App() {
     const cachedPeriods = localStorage.getItem('brush_custom_periods');
     if (cachedPeriods) setCustomPeriods(JSON.parse(cachedPeriods));
 
+    let currentBgs = ['bg1'];
     const cachedBackgrounds = localStorage.getItem('brush_unlocked_bgs');
-    if (cachedBackgrounds) setUnlockedBackgrounds(JSON.parse(cachedBackgrounds));
+    if (cachedBackgrounds) {
+      currentBgs = JSON.parse(cachedBackgrounds);
+    }
 
     const cachedCustomBg = localStorage.getItem('brush_custom_bg_url');
     if (cachedCustomBg) setCustomBackgroundUrl(cachedCustomBg);
@@ -81,17 +84,17 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const unlock = urlParams.get('unlock');
     if (unlock && /^bg[1-6]$/.test(unlock)) {
-      setUnlockedBackgrounds(prev => {
-        if (!prev.includes(unlock)) {
-          const next = [...prev, unlock];
-          localStorage.setItem('brush_unlocked_bgs', JSON.stringify(next));
-          alert(`🎉 Congratulations! You've unlocked ${unlock}!`);
-          return next;
-        }
-        return prev;
-      });
+      if (!currentBgs.includes(unlock)) {
+        currentBgs = [...currentBgs, unlock];
+        localStorage.setItem('brush_unlocked_bgs', JSON.stringify(currentBgs));
+        setTimeout(() => alert(`🎉 Congratulations! You've unlocked a new background wallpaper!`), 100);
+      } else {
+        setTimeout(() => alert(`You already have this wallpaper unlocked!`), 100);
+      }
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    
+    setUnlockedBackgrounds(currentBgs);
 
     const cachedSyncEnabled = localStorage.getItem('brush_sync_enabled');
     if (cachedSyncEnabled !== null) setCloudSyncEnabled(cachedSyncEnabled === 'true');
@@ -354,6 +357,7 @@ function App() {
               globalCurrentStreak={globalCurrentStreak}
               customBackgroundUrl={customBackgroundUrl}
               onUpdateCustomBackground={handleUpdateCustomBackground}
+              unlockedBackgrounds={unlockedBackgrounds}
            />
            <div className="mt-8 bg-white p-6 rounded-2xl shadow-sm text-center">
              <p className="text-gray-500 text-sm mb-4">Need to share your data with your dentist?</p>
