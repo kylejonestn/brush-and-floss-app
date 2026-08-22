@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { 
-  BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis 
+  BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis 
 } from 'recharts';
-import { parseISO, format, differenceInDays, startOfDay, subDays, isToday, isYesterday, isAfter } from 'date-fns';
+import { parseISO, format, differenceInDays, startOfDay, endOfDay, subDays, isToday, isYesterday, isAfter, isBefore } from 'date-fns';
 import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { THEMES } from '../utils/themes';
 
-export default function Dashboard({ records, userName, themeIndex = 0, syncStatus, onLogin }) {
+export default function Dashboard({ records, userName, themeIndex = 0, syncStatus, onLogin, customDateRange }) {
   const [timeframe, setTimeframe] = useState('Week');
 
   const stats = useMemo(() => {
@@ -14,12 +14,29 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
     
     const now = new Date();
     let startDate;
-    if (timeframe === 'Week') startDate = subDays(now, 7);
-    else if (timeframe === 'Month') startDate = subDays(now, 30);
+    let endDate = endOfDay(now);
+
+    if (timeframe === 'Week') {
+      startDate = startOfDay(subDays(now, 6));
+    } else if (timeframe === 'Month') {
+      startDate = startOfDay(subDays(now, 29));
+    } else if (timeframe === 'Custom') {
+      if (customDateRange?.start) startDate = startOfDay(parseISO(customDateRange.start));
+      if (customDateRange?.end) endDate = endOfDay(parseISO(customDateRange.end));
+      
+      // If end date is in the future, cap it at today so "Did Not Brush" doesn't count future days
+      if (endDate > endOfDay(now)) {
+        endDate = endOfDay(now);
+      }
+    }
     
-    const filteredRecords = startDate 
-      ? records.filter(r => isAfter(parseISO(r.timestamp), startDate))
-      : records;
+    const filteredRecords = records.filter(r => {
+      const d = parseISO(r.timestamp);
+      let ok = true;
+      if (startDate) ok = ok && d >= startDate;
+      if (endDate) ok = ok && d <= endDate;
+      return ok;
+    });
 
     if (filteredRecords.length === 0) return { empty: true };
 
@@ -36,12 +53,19 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
     });
 
     const uniqueDates = Object.keys(byDay).sort();
-    let firstDate = parseISO(uniqueDates[0]);
-    if (timeframe === 'Week') firstDate = startOfDay(subDays(now, 6));
-    if (timeframe === 'Month') firstDate = startOfDay(subDays(now, 29));
-    const lastDate = startOfDay(now);
     
-    const totalDays = differenceInDays(lastDate, firstDate) + 1;
+    // Determine the actual date range for calculation
+    let firstDate = startDate;
+    if (!firstDate && uniqueDates.length > 0) {
+      firstDate = parseISO(uniqueDates[0]); // All Time fallback
+    }
+
+    let lastDate = endDate;
+    if (!lastDate) {
+      lastDate = startOfDay(now);
+    }
+    
+    const totalDays = differenceInDays(startOfDay(lastDate), startOfDay(firstDate)) + 1;
 
     let didNotBrush = 0, once = 0, twice = 0, threeTimes = 0;
     let currentStreak = 0, maxStreak = 0;
@@ -112,7 +136,6 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
     const todayStr = format(now, 'yyyy-MM-dd');
     const todaysCount = allByDay[todayStr] || 0;
 
-    // 7-day Bar Chart Data (ignores timeframe so it's always useful context)
     const weekData = [];
     for (let i = 6; i >= 0; i--) {
       const d = subDays(now, i);
@@ -141,7 +164,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       goal3xPercent, brushedPercent, totalDays,
       counts: { didNotBrush, once, twice, threeTimes }
     };
-  }, [records, timeframe]);
+  }, [records, timeframe, customDateRange]);
 
   if (!stats) return <div className="text-center text-gray-500 mt-20">No data available. Log your first brush!</div>;
 
@@ -206,12 +229,12 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
         </div>
       </div>
 
-      <div className="flex justify-center gap-8 mt-6 text-sm font-medium text-gray-400">
-        {['Week', 'Month', 'All Time'].map(t => (
+      <div className="flex justify-center gap-6 mt-6 text-sm font-medium text-gray-400">
+        {['Week', 'Month', 'All Time', 'Custom'].map(t => (
           <button 
             key={t}
             onClick={() => setTimeframe(t)}
-            className={`pb-1 px-2 transition-colors ${timeframe === t ? 'text-gray-800 border-b-4 border-gray-800 rounded-sm' : ''}`}
+            className={`pb-1 px-1 transition-colors ${timeframe === t ? 'text-gray-800 border-b-4 border-gray-800 rounded-sm' : ''}`}
           >
             {t}
           </button>
@@ -219,11 +242,12 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       </div>
 
       {stats.empty ? (
-         <div className="text-center mt-12 text-gray-400">No data for this timeframe.</div>
+         <div className="text-center mt-12 text-gray-400 px-6">
+           No data for this timeframe. {timeframe === 'Custom' && "Check your Custom Timeframe in Settings."}
+         </div>
       ) : (
         <div className="px-6 mt-8 space-y-6">
           
-          {/* 7-Day Frequency Bar Chart */}
           <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-gray-500 font-medium text-sm">Recent Activity</h3>
@@ -321,15 +345,16 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
           {stats.monthlyData.length > 1 && (
             <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <h3 className="text-gray-500 font-medium text-sm mb-6">Monthly Trends</h3>
-              <div className="h-32">
+              <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stats.monthlyData}>
+                  <AreaChart data={stats.monthlyData} margin={{ top: 15, right: 0, left: -25, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#9ca3af" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
+                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} width={40} />
                     <Tooltip cursor={false} contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}}/>
                     <Area 
                       type="monotone" 
@@ -339,11 +364,12 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
                       fillOpacity={1} 
                       fill="url(#colorTotal)" 
                       activeDot={{r: 6, fill: '#4b5563', strokeWidth: 0}}
+                      label={{ fill: '#6b7280', fontSize: 10, position: 'top', dy: -5 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-4 font-medium px-2">
+              <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium ml-4">
                 {stats.monthlyData.map(d => (
                     <span key={d.name}>{d.name}</span>
                 ))}

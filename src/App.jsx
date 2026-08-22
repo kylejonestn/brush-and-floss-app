@@ -15,6 +15,7 @@ function App() {
   const [syncStatus, setSyncStatus] = useState('Not Synced');
   const [showSettings, setShowSettings] = useState(false);
   const [themeIndex, setThemeIndex] = useState(0);
+  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
     const cachedProfile = localStorage.getItem('brush_profile');
@@ -22,6 +23,9 @@ function App() {
 
     const cachedTheme = localStorage.getItem('brush_theme_index');
     if (cachedTheme) setThemeIndex(parseInt(cachedTheme, 10));
+
+    const cachedDates = localStorage.getItem('brush_custom_dates');
+    if (cachedDates) setCustomDateRange(JSON.parse(cachedDates));
 
     const cachedToken = localStorage.getItem('brush_access_token');
     const tokenExpiry = localStorage.getItem('brush_token_expiry');
@@ -57,11 +61,15 @@ function App() {
     localStorage.setItem('brush_profile', JSON.stringify(newProfile));
   };
 
+  const updateCustomDates = (newDates) => {
+    setCustomDateRange(newDates);
+    localStorage.setItem('brush_custom_dates', JSON.stringify(newDates));
+  };
+
   const login = useGoogleLogin({
     onSuccess: (codeResponse) => {
       setAccessToken(codeResponse.access_token);
       setSyncStatus('Syncing');
-      
       localStorage.setItem('brush_access_token', codeResponse.access_token);
       localStorage.setItem('brush_token_expiry', (Date.now() + 59 * 60 * 1000).toString());
     },
@@ -100,11 +108,8 @@ function App() {
         setSyncStatus('Synced');
       } catch (e) {
         console.error(e);
-        if (e.message && e.message.includes('401')) {
-           logout();
-        } else {
-           setSyncStatus('Error syncing');
-        }
+        if (e.message && e.message.includes('401')) logout();
+        else setSyncStatus('Error syncing');
       }
     }
     syncData();
@@ -113,7 +118,6 @@ function App() {
   const saveAndSyncRecords = async (newRecordsArray) => {
     setRecords(newRecordsArray);
     localStorage.setItem('brush_records', JSON.stringify(newRecordsArray));
-    
     if (accessToken && driveFileId) {
       setSyncStatus('Syncing');
       try {
@@ -139,7 +143,6 @@ function App() {
       action: 'brush_and_floss'
     };
     mergeAndSaveData([newRecord]);
-
     const nextTheme = (themeIndex + 1) % 7;
     setThemeIndex(nextTheme);
     localStorage.setItem('brush_theme_index', nextTheme.toString());
@@ -151,14 +154,10 @@ function App() {
   };
 
   const exportPDF = () => {
-    // The Dashboard must be visible to capture it
     setShowSettings(false);
-    
-    // Wait for the DOM to update and render the Dashboard charts
     setTimeout(() => {
       const element = document.getElementById('export-pdf-area');
       if (!element) return;
-      
       const opt = {
         margin: 0.5,
         filename: `${profile?.name || 'My'}_Brush_and_Floss_Report.pdf`,
@@ -166,9 +165,7 @@ function App() {
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
-      
       try {
-        // Handle potential Vite ES module interop issues
         const generatePdf = typeof html2pdf === 'function' ? html2pdf : html2pdf.default;
         generatePdf().set(opt).from(element).save();
       } catch (e) {
@@ -195,6 +192,8 @@ function App() {
               onImportData={mergeAndSaveData}
               onAddRecord={(rec) => mergeAndSaveData([rec])}
               onDeleteRecord={handleDeleteRecord}
+              customDateRange={customDateRange}
+              updateCustomDates={updateCustomDates}
               onClose={() => setShowSettings(false)}
            />
            <div className="mt-8 bg-white p-6 rounded-2xl shadow-sm text-center">
@@ -211,6 +210,7 @@ function App() {
           themeIndex={themeIndex} 
           syncStatus={syncStatus} 
           onLogin={login}
+          customDateRange={customDateRange}
         />
       )}
 

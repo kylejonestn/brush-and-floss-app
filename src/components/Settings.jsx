@@ -11,6 +11,8 @@ export default function Settings({
   onImportData, 
   onAddRecord,
   onDeleteRecord,
+  customDateRange,
+  updateCustomDates,
   onClose 
 }) {
   const fileInputRef = useRef(null);
@@ -137,6 +139,33 @@ ${generateEvent(reminderTime1)}${generateEvent(reminderTime2)}END:VCALENDAR`;
         <button onClick={onClose} className="text-gray-400 hover:text-black font-medium">
           Close
         </button>
+      </div>
+
+      <div className="mb-8 border-b pb-8">
+        <h3 className="text-xl font-semibold mb-3 text-gray-800">Custom Timeframe</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Set a custom date range (e.g., between dentist visits) for your Dashboard's "Custom" tab.
+        </p>
+        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex gap-4 mb-4">
+           <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+              <input 
+                 type="date" 
+                 value={customDateRange?.start || ''} 
+                 onChange={e => updateCustomDates({ ...customDateRange, start: e.target.value })}
+                 className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2d3a70]"
+              />
+           </div>
+           <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">End Date</label>
+              <input 
+                 type="date" 
+                 value={customDateRange?.end || ''} 
+                 onChange={e => updateCustomDates({ ...customDateRange, end: e.target.value })}
+                 className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2d3a70]"
+              />
+           </div>
+        </div>
       </div>
 
       <div className="mb-8 border-b pb-8">
