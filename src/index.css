@@ -5,6 +5,11 @@ body {
 }
 
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
   body {
     background-color: white !important;
   }
@@ -13,10 +18,13 @@ body {
     max-width: 100% !important;
     background-color: white !important;
     padding-bottom: 0 !important;
+    min-height: auto !important;
+  }
+  .pb-32 {
+    padding-bottom: 0 !important;
   }
   /* Hide Bottom Nav on Print */
-  nav, .fixed.bottom-0, .pb-32 {
+  nav, .fixed.bottom-0 {
     display: none !important;
-    padding-bottom: 0 !important;
   }
 }
