@@ -3,16 +3,15 @@ import {
   BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip 
 } from 'recharts';
 import { parseISO, format, differenceInDays, startOfDay, subDays, isToday, isYesterday, isAfter } from 'date-fns';
-import { Settings, Award, AlertCircle, Target, TrendingUp } from 'lucide-react';
+import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { THEMES } from '../utils/themes';
 
-export default function Dashboard({ records, userName, themeIndex = 0 }) {
-  const [timeframe, setTimeframe] = useState('All Time'); // Week, Month, All Time
+export default function Dashboard({ records, userName, themeIndex = 0, syncStatus }) {
+  const [timeframe, setTimeframe] = useState('All Time');
 
   const stats = useMemo(() => {
     if (!records || records.length === 0) return null;
     
-    // 1. Filter records based on timeframe
     const now = new Date();
     let startDate;
     if (timeframe === 'Week') startDate = subDays(now, 7);
@@ -30,7 +29,6 @@ export default function Dashboard({ records, userName, themeIndex = 0 }) {
       byDay[dateKey] = (byDay[dateKey] || 0) + 1;
     });
 
-    // We calculate total days in the selected period to properly find "Did Not Brush" days
     const uniqueDates = Object.keys(byDay).sort();
     let firstDate = parseISO(uniqueDates[0]);
     if (timeframe === 'Week') firstDate = startOfDay(subDays(now, 6));
@@ -108,7 +106,7 @@ export default function Dashboard({ records, userName, themeIndex = 0 }) {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const todaysCount = byDay[todayStr] || 0;
 
-    const lastRecord = records[records.length - 1]; // Use overall records for last brushed
+    const lastRecord = records[records.length - 1]; 
     let lastBrushText = "";
     if (lastRecord) {
       const lastDateObj = parseISO(lastRecord.timestamp);
@@ -132,6 +130,17 @@ export default function Dashboard({ records, userName, themeIndex = 0 }) {
 
   const currentTheme = THEMES[themeIndex % THEMES.length];
 
+  const renderSyncIcon = () => {
+    switch(syncStatus) {
+      case 'Synced':
+         return <Cloud size={24} className="text-white/80 transition-all duration-300" />;
+      case 'Syncing':
+         return <RefreshCw size={24} className="text-white/80 animate-spin transition-all duration-300" />;
+      default: // 'Not Synced' or 'Error syncing'
+         return <CloudOff size={24} className="text-white/50 transition-all duration-300" />;
+    }
+  };
+
   return (
     <div className="pb-32 bg-[#f4f7fb] min-h-screen transition-colors duration-500">
       
@@ -141,7 +150,9 @@ export default function Dashboard({ records, userName, themeIndex = 0 }) {
             <h1 className="text-3xl font-light mb-1">Hi {userName || 'There'}</h1>
             <p className="text-white/80 text-sm">Keep your smile bright</p>
           </div>
-          <Settings size={24} className="text-white/80" />
+          <div title={`Cloud Status: ${syncStatus}`}>
+             {renderSyncIcon()}
+          </div>
         </div>
         
         <div className="flex flex-col items-center mt-2 animate-fade-in-up">
@@ -172,7 +183,6 @@ export default function Dashboard({ records, userName, themeIndex = 0 }) {
       ) : (
         <div className="px-6 mt-8 space-y-6">
           
-          {/* Main Breakdown Card */}
           <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-gray-500 font-medium text-sm">Habit Breakdown</h3>
@@ -212,7 +222,6 @@ export default function Dashboard({ records, userName, themeIndex = 0 }) {
             </div>
           </div>
 
-          {/* Insights Grid */}
           <div className="grid grid-cols-2 gap-4">
             
             <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
@@ -245,7 +254,6 @@ export default function Dashboard({ records, userName, themeIndex = 0 }) {
 
           </div>
 
-          {/* Monthly Trends */}
           {stats.monthlyData.length > 1 && (
             <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <h3 className="text-gray-500 font-medium text-sm mb-6">Monthly Trends</h3>

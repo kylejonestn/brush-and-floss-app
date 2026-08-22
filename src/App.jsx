@@ -23,7 +23,6 @@ function App() {
     const cachedTheme = localStorage.getItem('brush_theme_index');
     if (cachedTheme) setThemeIndex(parseInt(cachedTheme, 10));
 
-    // Restore Access Token if not expired (tokens last 1 hour)
     const cachedToken = localStorage.getItem('brush_access_token');
     const tokenExpiry = localStorage.getItem('brush_token_expiry');
     if (cachedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry, 10)) {
@@ -63,7 +62,6 @@ function App() {
       setAccessToken(codeResponse.access_token);
       setSyncStatus('Syncing');
       
-      // Save token and set expiration to 59 minutes from now
       localStorage.setItem('brush_access_token', codeResponse.access_token);
       localStorage.setItem('brush_token_expiry', (Date.now() + 59 * 60 * 1000).toString());
     },
@@ -102,7 +100,6 @@ function App() {
         setSyncStatus('Synced');
       } catch (e) {
         console.error(e);
-        // If it's a 401 Unauthorized, the token might have been revoked early
         if (e.message && e.message.includes('401')) {
            logout();
         } else {
@@ -192,13 +189,12 @@ function App() {
            </div>
         </div>
       ) : (
-        <Dashboard records={records} userName={profile.name} themeIndex={themeIndex} />
-      )}
-
-      {accessToken && syncStatus !== 'Synced' && (
-         <div className="absolute top-2 right-2 text-xs text-white bg-black bg-opacity-20 px-2 py-1 rounded-full z-50">
-            {syncStatus}
-         </div>
+        <Dashboard 
+          records={records} 
+          userName={profile.name} 
+          themeIndex={themeIndex} 
+          syncStatus={syncStatus} 
+        />
       )}
 
       <BottomNav 
