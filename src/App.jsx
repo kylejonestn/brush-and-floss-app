@@ -91,23 +91,26 @@ function App() {
     syncData();
   }, [accessToken]);
 
-  const mergeAndSaveData = async (newRecordsToMerge) => {
-    const mergedMap = new Map();
-    [...records, ...newRecordsToMerge].forEach(r => mergedMap.set(r.timestamp, r));
-    const mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-    setRecords(mergedData);
-    localStorage.setItem('brush_records', JSON.stringify(mergedData));
+  const saveAndSyncRecords = async (newRecordsArray) => {
+    setRecords(newRecordsArray);
+    localStorage.setItem('brush_records', JSON.stringify(newRecordsArray));
     
     if (accessToken && driveFileId) {
       setSyncStatus('Syncing');
       try {
-        await writeDriveFile(accessToken, driveFileId, mergedData);
+        await writeDriveFile(accessToken, driveFileId, newRecordsArray);
         setSyncStatus('Synced');
       } catch (e) {
         setSyncStatus('Error syncing');
       }
     }
+  };
+
+  const mergeAndSaveData = async (newRecordsToMerge) => {
+    const mergedMap = new Map();
+    [...records, ...newRecordsToMerge].forEach(r => mergedMap.set(r.timestamp, r));
+    const mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    saveAndSyncRecords(mergedData);
   };
 
   const handleLogBrush = () => {
@@ -117,10 +120,14 @@ function App() {
     };
     mergeAndSaveData([newRecord]);
 
-    // Rotate theme
     const nextTheme = (themeIndex + 1) % 7;
     setThemeIndex(nextTheme);
     localStorage.setItem('brush_theme_index', nextTheme.toString());
+  };
+
+  const handleDeleteRecord = (timestampToRemove) => {
+    const updatedRecords = records.filter(r => r.timestamp !== timestampToRemove);
+    saveAndSyncRecords(updatedRecords);
   };
 
   const exportPDF = () => {
@@ -150,6 +157,8 @@ function App() {
               onLogin={login} 
               onLogout={logout} 
               onImportData={mergeAndSaveData}
+              onAddRecord={(rec) => mergeAndSaveData([rec])}
+              onDeleteRecord={handleDeleteRecord}
               onClose={() => setShowSettings(false)}
            />
            <div className="mt-8 bg-white p-6 rounded-2xl shadow-sm text-center">
