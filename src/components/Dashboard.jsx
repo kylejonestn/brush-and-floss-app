@@ -484,16 +484,17 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
             {stats.monthlyData.length > 1 && (
               <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <h3 className="text-gray-500 font-medium text-sm mb-6">Monthly Trends</h3>
-                <div className="h-40">
+                <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={stats.monthlyData} margin={{ top: 15, right: 0, left: -25, bottom: 0 }}>
+                    <AreaChart data={stats.monthlyData} margin={{ top: 20, right: 15, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.3}/>
                           <stop offset="95%" stopColor="#9ca3af" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} width={40} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#9ca3af', fontWeight: 500}} dy={10} height={30} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} width={35} />
                       <Tooltip cursor={false} contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}}/>
                       <Area 
                         type="monotone" 
@@ -507,11 +508,6 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
                       />
                     </AreaChart>
                   </ResponsiveContainer>
-                </div>
-                <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium ml-4">
-                  {stats.monthlyData.map(d => (
-                      <span key={d.name}>{d.name}</span>
-                  ))}
                 </div>
               </div>
             )}
