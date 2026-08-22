@@ -23,6 +23,16 @@ function App() {
     const cachedTheme = localStorage.getItem('brush_theme_index');
     if (cachedTheme) setThemeIndex(parseInt(cachedTheme, 10));
 
+    // Restore Access Token if not expired (tokens last 1 hour)
+    const cachedToken = localStorage.getItem('brush_access_token');
+    const tokenExpiry = localStorage.getItem('brush_token_expiry');
+    if (cachedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry, 10)) {
+      setAccessToken(cachedToken);
+    } else {
+      localStorage.removeItem('brush_access_token');
+      localStorage.removeItem('brush_token_expiry');
+    }
+
     const cachedRecords = localStorage.getItem('brush_records');
     if (cachedRecords) {
       try {
@@ -52,6 +62,10 @@ function App() {
     onSuccess: (codeResponse) => {
       setAccessToken(codeResponse.access_token);
       setSyncStatus('Syncing');
+      
+      // Save token and set expiration to 59 minutes from now
+      localStorage.setItem('brush_access_token', codeResponse.access_token);
+      localStorage.setItem('brush_token_expiry', (Date.now() + 59 * 60 * 1000).toString());
     },
     scope: 'https://www.googleapis.com/auth/drive.file',
     onError: (error) => console.log('Login Failed:', error)
@@ -62,6 +76,8 @@ function App() {
     setAccessToken(null);
     setDriveFileId(null);
     setSyncStatus('Not Synced');
+    localStorage.removeItem('brush_access_token');
+    localStorage.removeItem('brush_token_expiry');
   };
 
   useEffect(() => {
@@ -85,7 +101,13 @@ function App() {
         await writeDriveFile(accessToken, fileId, mergedData);
         setSyncStatus('Synced');
       } catch (e) {
-        setSyncStatus('Error syncing');
+        console.error(e);
+        // If it's a 401 Unauthorized, the token might have been revoked early
+        if (e.message && e.message.includes('401')) {
+           logout();
+        } else {
+           setSyncStatus('Error syncing');
+        }
       }
     }
     syncData();
@@ -101,7 +123,8 @@ function App() {
         await writeDriveFile(accessToken, driveFileId, newRecordsArray);
         setSyncStatus('Synced');
       } catch (e) {
-        setSyncStatus('Error syncing');
+        if (e.message && e.message.includes('401')) logout();
+        else setSyncStatus('Error syncing');
       }
     }
   };
