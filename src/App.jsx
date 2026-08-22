@@ -232,8 +232,8 @@ function App() {
     localStorage.setItem('brush_phrase_index', nextPhrase.toString());
   };
 
-  const handleDeleteRecord = (timestampToRemove) => {
-    const updatedRecords = records.filter(r => r.timestamp !== timestampToRemove);
+  const handleDeleteRecords = (timestampsToRemove) => {
+    const updatedRecords = records.filter(r => !timestampsToRemove.includes(r.timestamp));
     saveAndSyncRecords(updatedRecords);
   };
 
@@ -260,7 +260,7 @@ function App() {
               onLogout={logout} 
               onImportData={mergeAndSaveData}
               onAddRecord={(rec) => mergeAndSaveData([rec])}
-              onDeleteRecord={handleDeleteRecord}
+              onDeleteRecords={handleDeleteRecords}
               customDateRange={customDateRange}
               updateCustomDates={updateCustomDates}
               customPeriods={customPeriods}

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import Papa from 'papaparse';
 import { parseISO, format, isValid } from 'date-fns';
+import BulkManager from './BulkManager';
 
 export default function Settings({ 
   records, 
@@ -9,7 +10,7 @@ export default function Settings({
   onLogout, 
   onImportData, 
   onAddRecord,
-  onDeleteRecord,
+  onDeleteRecords,
   customDateRange,
   updateCustomDates,
   customPeriods,
@@ -19,6 +20,7 @@ export default function Settings({
   onToggleCloudSync,
   onClose 
 }) {
+  const [showBulkManager, setShowBulkManager] = useState(false);
   const fileInputRef = useRef(null);
   const [importMessage, setImportMessage] = useState('');
   
@@ -31,6 +33,17 @@ export default function Settings({
   const [periodLabel, setPeriodLabel] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
+
+  if (showBulkManager) {
+    return (
+       <BulkManager 
+         records={records}
+         onDeleteRecords={onDeleteRecords}
+         onAddRecords={onImportData} 
+         onClose={() => setShowBulkManager(false)}
+       />
+    );
+  }
 
   const handleCreateReminders = () => {
     const generateEvent = (time) => {
@@ -372,7 +385,16 @@ ${generateEvent(reminderTime1)}${generateEvent(reminderTime2)}END:VCALENDAR`;
       </div>
 
       <div>
-        <h3 className="text-xl font-semibold mb-3 text-red-600">Danger Zone</h3>
+        <div className="flex justify-between items-center mb-3">
+           <h3 className="text-xl font-semibold text-red-600">Danger Zone</h3>
+           <button 
+             onClick={() => setShowBulkManager(true)}
+             className="text-xs bg-gray-200 text-gray-700 hover:bg-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors"
+           >
+             Advanced Bulk Manage
+           </button>
+        </div>
+        
         <div className="bg-red-50 p-4 rounded-xl border border-red-100">
            <p className="text-sm text-red-800 mb-4">
              Recently logged records. You can delete them if you made a mistake.
@@ -388,7 +410,7 @@ ${generateEvent(reminderTime1)}${generateEvent(reminderTime2)}END:VCALENDAR`;
                    </div>
                    <button 
                      onClick={() => {
-                        if(window.confirm('Delete this record?')) onDeleteRecord(r.timestamp);
+                        if(window.confirm('Delete this record?')) onDeleteRecords([r.timestamp]);
                      }}
                      className="text-red-500 text-xs font-medium px-3 py-1.5 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
                    >
