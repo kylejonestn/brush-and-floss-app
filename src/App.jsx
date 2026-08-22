@@ -5,6 +5,7 @@ import Settings from './components/Settings';
 import BottomNav from './components/BottomNav';
 import Onboarding from './components/Onboarding';
 import { initDriveSync, readDriveFile, writeDriveFile } from './utils/driveSync';
+import { ENCOURAGING_PHRASES } from './utils/phrases';
 
 function App() {
   const [profile, setProfile] = useState(null);
@@ -14,6 +15,7 @@ function App() {
   const [syncStatus, setSyncStatus] = useState('Not Synced');
   const [showSettings, setShowSettings] = useState(false);
   const [themeIndex, setThemeIndex] = useState(0);
+  const [phraseIndex, setPhraseIndex] = useState(0);
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
   const [customPeriods, setCustomPeriods] = useState([]);
 
@@ -23,6 +25,10 @@ function App() {
 
     const cachedTheme = localStorage.getItem('brush_theme_index');
     if (cachedTheme) setThemeIndex(parseInt(cachedTheme, 10));
+
+    const cachedPhrase = localStorage.getItem('brush_phrase_index');
+    if (cachedPhrase) setPhraseIndex(parseInt(cachedPhrase, 10));
+    else setPhraseIndex(Math.floor(Math.random() * ENCOURAGING_PHRASES.length));
 
     const cachedDates = localStorage.getItem('brush_custom_dates');
     if (cachedDates) setCustomDateRange(JSON.parse(cachedDates));
@@ -161,6 +167,10 @@ function App() {
     const nextTheme = (themeIndex + 1) % 7;
     setThemeIndex(nextTheme);
     localStorage.setItem('brush_theme_index', nextTheme.toString());
+
+    const nextPhrase = (phraseIndex + 1) % ENCOURAGING_PHRASES.length;
+    setPhraseIndex(nextPhrase);
+    localStorage.setItem('brush_phrase_index', nextPhrase.toString());
   };
 
   const handleDeleteRecord = (timestampToRemove) => {
@@ -210,7 +220,8 @@ function App() {
         <Dashboard 
           records={records} 
           userName={profile.name} 
-          themeIndex={themeIndex} 
+          themeIndex={themeIndex}
+          phraseIndex={phraseIndex} 
           syncStatus={syncStatus} 
           onLogin={login}
           customDateRange={customDateRange}
@@ -223,6 +234,7 @@ function App() {
          showSettings={showSettings} 
          onToggleSettings={setShowSettings}
          themeIndex={themeIndex}
+          phraseIndex={phraseIndex}
       />
     </div>
   );

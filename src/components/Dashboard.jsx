@@ -5,8 +5,9 @@ import {
 import { parseISO, format, differenceInDays, startOfDay, endOfDay, subDays, isToday, isYesterday, isAfter, isBefore } from 'date-fns';
 import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw, History } from 'lucide-react';
 import { THEMES } from '../utils/themes';
+import { ENCOURAGING_PHRASES } from '../utils/phrases';
 
-export default function Dashboard({ records, userName, themeIndex = 0, syncStatus, onLogin, customDateRange, customPeriods }) {
+export default function Dashboard({ records, userName, themeIndex = 0, phraseIndex = 0, syncStatus, onLogin, customDateRange, customPeriods }) {
   const [timeframe, setTimeframe] = useState('Week');
 
   const stats = useMemo(() => {
@@ -341,7 +342,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
         <div className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-3xl font-light mb-1">Hi {userName || 'There'}</h1>
-            <p className="text-white/80 text-sm">Keep your smile bright</p>
+            <p className="text-white/80 text-sm">{ENCOURAGING_PHRASES[phraseIndex] || "Keep your smile bright"}</p>
           </div>
           <button 
              onClick={handleCloudClick}
