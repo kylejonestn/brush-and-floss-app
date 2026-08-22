@@ -74,21 +74,43 @@ function App() {
     localStorage.setItem('brush_profile', JSON.stringify(newProfile));
   };
 
+  const triggerSettingsSync = async (dates, periods, recs) => {
+    if (!cloudSyncEnabled || !accessToken || !driveFileId) return;
+    setSyncStatus('Syncing');
+    try {
+      const payload = {
+        records: recs,
+        settings: {
+          customDateRange: dates,
+          customPeriods: periods
+        }
+      };
+      await writeDriveFile(accessToken, driveFileId, payload);
+      setSyncStatus('Synced');
+    } catch (e) {
+      if (e.message && e.message.includes('401')) logout();
+      else setSyncStatus('Error syncing');
+    }
+  };
+
   const updateCustomDates = (newDates) => {
     setCustomDateRange(newDates);
     localStorage.setItem('brush_custom_dates', JSON.stringify(newDates));
+    triggerSettingsSync(newDates, customPeriods, records);
   };
 
   const addCustomPeriod = (period) => {
     const next = [...customPeriods, { ...period, id: Date.now().toString() }];
     setCustomPeriods(next);
     localStorage.setItem('brush_custom_periods', JSON.stringify(next));
+    triggerSettingsSync(customDateRange, next, records);
   };
 
   const removeCustomPeriod = (id) => {
     const next = customPeriods.filter(p => p.id !== id);
     setCustomPeriods(next);
     localStorage.setItem('brush_custom_periods', JSON.stringify(next));
+    triggerSettingsSync(customDateRange, next, records);
   };
 
   const login = useGoogleLogin({
@@ -127,17 +149,51 @@ function App() {
         const { fileId } = await initDriveSync(accessToken);
         setDriveFileId(fileId);
 
-        const remoteData = await readDriveFile(accessToken, fileId) || [];
+        const remotePayload = await readDriveFile(accessToken, fileId) || [];
+        let remoteRecords = [];
+        let remoteSettings = null;
+
+        if (Array.isArray(remotePayload)) {
+            remoteRecords = remotePayload;
+        } else if (remotePayload && typeof remotePayload === 'object' && remotePayload.records) {
+            remoteRecords = remotePayload.records;
+            remoteSettings = remotePayload.settings;
+        }
+
         const localDataStr = localStorage.getItem('brush_records');
         const localData = localDataStr ? JSON.parse(localDataStr) : [];
         
         const mergedMap = new Map();
-        [...remoteData, ...localData].forEach(r => mergedMap.set(r.timestamp, r));
+        [...remoteRecords, ...localData].forEach(r => mergedMap.set(r.timestamp, r));
         const mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        let nextDates = customDateRange;
+        let nextPeriods = customPeriods;
+
+        if (remoteSettings) {
+            if (remoteSettings.customDateRange) {
+                nextDates = remoteSettings.customDateRange;
+                setCustomDateRange(nextDates);
+                localStorage.setItem('brush_custom_dates', JSON.stringify(nextDates));
+            }
+            if (remoteSettings.customPeriods) {
+                nextPeriods = remoteSettings.customPeriods;
+                setCustomPeriods(nextPeriods);
+                localStorage.setItem('brush_custom_periods', JSON.stringify(nextPeriods));
+            }
+        }
 
         setRecords(mergedData);
         localStorage.setItem('brush_records', JSON.stringify(mergedData));
-        await writeDriveFile(accessToken, fileId, mergedData);
+        
+        const newPayload = {
+            records: mergedData,
+            settings: {
+                customDateRange: nextDates,
+                customPeriods: nextPeriods
+            }
+        };
+        await writeDriveFile(accessToken, fileId, newPayload);
         setSyncStatus('Synced');
       } catch (e) {
         console.error(e);
@@ -151,16 +207,7 @@ function App() {
   const saveAndSyncRecords = async (newRecordsArray) => {
     setRecords(newRecordsArray);
     localStorage.setItem('brush_records', JSON.stringify(newRecordsArray));
-    if (cloudSyncEnabled && accessToken && driveFileId) {
-      setSyncStatus('Syncing');
-      try {
-        await writeDriveFile(accessToken, driveFileId, newRecordsArray);
-        setSyncStatus('Synced');
-      } catch (e) {
-        if (e.message && e.message.includes('401')) logout();
-        else setSyncStatus('Error syncing');
-      }
-    }
+    await triggerSettingsSync(customDateRange, customPeriods, newRecordsArray);
   };
 
   const mergeAndSaveData = async (newRecordsToMerge) => {
