@@ -87,6 +87,19 @@ export default function Settings({
         )}
       </div>
 
+      <div className="mb-8 border-b pb-8">
+        <h3 className="text-xl font-semibold mb-4">Profile</h3>
+        <button 
+          onClick={() => {
+            localStorage.removeItem('brush_profile');
+            window.location.reload();
+          }}
+          className="bg-gray-200 hover:bg-gray-300 text-black px-4 py-2 rounded font-medium transition-colors"
+        >
+          Change Name (Reset Profile)
+        </button>
+      </div>
+
       <div>
         <h3 className="text-xl font-semibold mb-4">Import Data</h3>
         <p className="text-gray-600 mb-4">

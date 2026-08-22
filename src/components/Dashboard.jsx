@@ -6,8 +6,8 @@ import {
 import { parseISO, format, differenceInDays, startOfDay, subDays } from 'date-fns';
 import { Settings, CheckSquare } from 'lucide-react';
 
-export default function Dashboard({ records }) {
-  const [timeframe, setTimeframe] = useState('Week'); // Week, Month, Year
+export default function Dashboard({ records, userName }) {
+  const [timeframe, setTimeframe] = useState('Week');
 
   const stats = useMemo(() => {
     if (!records || records.length === 0) return null;
@@ -22,18 +22,16 @@ export default function Dashboard({ records }) {
     const firstDate = parseISO(uniqueDates[0]);
     const lastDate = parseISO(uniqueDates[uniqueDates.length - 1]);
     
-    // Calculate last 7 days for the "Week" chart
     const weekData = [];
     for (let i = 6; i >= 0; i--) {
       const d = subDays(new Date(), i);
       const dateKey = format(d, 'yyyy-MM-dd');
       weekData.push({
-        name: format(d, 'EEE').substring(0,1), // S, M, T
+        name: format(d, 'EEE').substring(0,1),
         value: byDay[dateKey] || 0
       });
     }
 
-    // Monthly Area Chart Data
     const monthlyMap = {};
     Object.keys(byDay).forEach(dateKey => {
       if (byDay[dateKey] > 0) {
@@ -57,7 +55,6 @@ export default function Dashboard({ records }) {
       current.setDate(current.getDate() + 1);
     }
 
-    // Todays count
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const todaysCount = byDay[todayStr] || 0;
 
@@ -69,17 +66,15 @@ export default function Dashboard({ records }) {
   return (
     <div className="pb-32 bg-[#f4f7fb] min-h-screen">
       
-      {/* Curved Header */}
       <div className="bg-gradient-to-br from-[#4c60a4] to-[#2d3a70] text-white rounded-b-[3rem] px-8 pt-12 pb-16 shadow-lg relative">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-3xl font-light mb-1">Hi Kyle</h1>
+            <h1 className="text-3xl font-light mb-1">Hi {userName || 'There'}</h1>
             <p className="text-indigo-200 text-sm">Keep your smile bright</p>
           </div>
           <Settings size={24} className="text-indigo-200 opacity-80" />
         </div>
         
-        {/* Avatars / Graphics placeholder */}
         <div className="flex justify-center mt-4">
           <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden shadow-xl bg-white flex items-center justify-center">
             <span className="text-4xl">🦷</span>
@@ -87,7 +82,6 @@ export default function Dashboard({ records }) {
         </div>
       </div>
 
-      {/* Segmented Control */}
       <div className="flex justify-center gap-8 mt-6 text-sm font-medium text-gray-400">
         {['Week', 'Month', 'Year'].map(t => (
           <button 
@@ -102,10 +96,8 @@ export default function Dashboard({ records }) {
 
       <div className="px-6 mt-8 space-y-6">
         
-        {/* Top Cards Row */}
         <div className="grid grid-cols-2 gap-4">
           
-          {/* Brushing Frequency Card */}
           <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <h3 className="text-gray-500 font-medium text-sm mb-4">Frequency</h3>
             <div className="h-32">
@@ -125,7 +117,6 @@ export default function Dashboard({ records }) {
             </div>
           </div>
 
-          {/* Stats Card */}
           <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between text-center relative overflow-hidden">
              <div className="absolute top-0 right-0 p-4 opacity-5">
                <CheckSquare size={64} />
@@ -143,7 +134,6 @@ export default function Dashboard({ records }) {
           </div>
         </div>
 
-        {/* Temperature equivalent - Monthly Trends */}
         <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <h3 className="text-gray-500 font-medium text-sm mb-6">Monthly Trends</h3>
           <div className="h-32">
