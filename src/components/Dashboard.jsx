@@ -139,11 +139,24 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
   const renderSyncIcon = () => {
     switch(syncStatus) {
       case 'Synced':
-         return <Cloud size={24} className="text-white/80 transition-all duration-300" />;
+         return (
+           <div className="relative flex items-center justify-center w-8 h-8">
+             <Cloud size={24} className="text-white/90 transition-all duration-300" />
+           </div>
+         );
       case 'Syncing':
-         return <RefreshCw size={24} className="text-white/80 animate-spin transition-all duration-300" />;
+         return (
+           <div className="relative flex items-center justify-center w-8 h-8">
+             <RefreshCw size={24} className="text-white/90 animate-spin transition-all duration-300" />
+           </div>
+         );
       default: // 'Not Synced' or 'Error syncing'
-         return <CloudOff size={24} className="text-white/50 transition-all duration-300 group-hover:text-white" />;
+         return (
+           <div className="relative flex items-center justify-center w-8 h-8">
+             <div className={`absolute inset-0 rounded-full ${currentTheme.nav} animate-ping opacity-75`}></div>
+             <CloudOff size={24} className="relative z-10 text-white transition-all duration-300" />
+           </div>
+         );
     }
   };
 
@@ -159,7 +172,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
           <button 
              onClick={handleCloudClick}
              title={syncStatus === 'Not Synced' || syncStatus === 'Error syncing' ? 'Click to reconnect to Google Drive' : `Cloud Status: ${syncStatus}`}
-             className={`group focus:outline-none ${(syncStatus === 'Not Synced' || syncStatus === 'Error syncing') ? 'cursor-pointer hover:scale-110 active:scale-95 transition-transform' : 'cursor-default'}`}
+             className={`group focus:outline-none ${(syncStatus === 'Not Synced' || syncStatus === 'Error syncing') ? 'cursor-pointer' : 'cursor-default'}`}
           >
              {renderSyncIcon()}
           </button>
