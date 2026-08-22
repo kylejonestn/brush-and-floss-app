@@ -16,6 +16,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [themeIndex, setThemeIndex] = useState(0);
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+  const [customPeriods, setCustomPeriods] = useState([]);
 
   useEffect(() => {
     const cachedProfile = localStorage.getItem('brush_profile');
@@ -26,6 +27,9 @@ function App() {
 
     const cachedDates = localStorage.getItem('brush_custom_dates');
     if (cachedDates) setCustomDateRange(JSON.parse(cachedDates));
+
+    const cachedPeriods = localStorage.getItem('brush_custom_periods');
+    if (cachedPeriods) setCustomPeriods(JSON.parse(cachedPeriods));
 
     const cachedToken = localStorage.getItem('brush_access_token');
     const tokenExpiry = localStorage.getItem('brush_token_expiry');
@@ -64,6 +68,18 @@ function App() {
   const updateCustomDates = (newDates) => {
     setCustomDateRange(newDates);
     localStorage.setItem('brush_custom_dates', JSON.stringify(newDates));
+  };
+
+  const addCustomPeriod = (period) => {
+    const next = [...customPeriods, { ...period, id: Date.now().toString() }];
+    setCustomPeriods(next);
+    localStorage.setItem('brush_custom_periods', JSON.stringify(next));
+  };
+
+  const removeCustomPeriod = (id) => {
+    const next = customPeriods.filter(p => p.id !== id);
+    setCustomPeriods(next);
+    localStorage.setItem('brush_custom_periods', JSON.stringify(next));
   };
 
   const login = useGoogleLogin({
@@ -194,6 +210,9 @@ function App() {
               onDeleteRecord={handleDeleteRecord}
               customDateRange={customDateRange}
               updateCustomDates={updateCustomDates}
+              customPeriods={customPeriods}
+              addCustomPeriod={addCustomPeriod}
+              removeCustomPeriod={removeCustomPeriod}
               onClose={() => setShowSettings(false)}
            />
            <div className="mt-8 bg-white p-6 rounded-2xl shadow-sm text-center">
@@ -211,6 +230,7 @@ function App() {
           syncStatus={syncStatus} 
           onLogin={login}
           customDateRange={customDateRange}
+          customPeriods={customPeriods}
         />
       )}
 

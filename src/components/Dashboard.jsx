@@ -151,9 +151,66 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       else lastBrushText = `${format(lastDateObj, 'MMM d')} at ${timeStr}`;
     }
 
-    // --- Generate Historical Comparison (Half-Year Chunks) ignoring timeframe ---
     const historicalPeriods = [];
     const allUniqueDates = Object.keys(allByDay).sort();
+    
+    // Process User-Defined Custom Periods First
+    if (customPeriods && customPeriods.length > 0) {
+      customPeriods.forEach(p => {
+        const pStart = startOfDay(parseISO(p.start));
+        let pEnd = endOfDay(parseISO(p.end));
+        if (pEnd > endOfDay(now)) pEnd = endOfDay(now);
+        
+        let pTotalDays = differenceInDays(pEnd, pStart) + 1;
+        
+        if (pTotalDays > 0) {
+          let pDidNotBrush = 0, pThreeTimes = 0;
+          let pMaxStreak = 0, pCurrentStreak = 0;
+          const pMissedDays = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
+
+          let curr = new Date(pStart);
+          while (curr <= pEnd) {
+            const dateKey = format(curr, 'yyyy-MM-dd');
+            const count = allByDay[dateKey] || 0;
+            const dayOfWeek = curr.getDay();
+
+            if (count === 0) {
+              pDidNotBrush++;
+              pCurrentStreak = 0;
+              pMissedDays[dayOfWeek]++;
+            } else {
+              if (count >= 3) pThreeTimes++;
+              pCurrentStreak++;
+              if (pCurrentStreak > pMaxStreak) pMaxStreak = pCurrentStreak;
+            }
+            curr.setDate(curr.getDate() + 1);
+          }
+
+          let pMostMissed = 0, pMostMissedCount = -1;
+          Object.keys(pMissedDays).forEach(d => {
+            if (pMissedDays[d] > pMostMissedCount) {
+              pMostMissedCount = pMissedDays[d];
+              pMostMissed = d;
+            }
+          });
+
+          const pBrushedPercent = Math.round(((pTotalDays - pDidNotBrush) / pTotalDays) * 100) || 0;
+          const pGoalPercent = Math.round((pThreeTimes / pTotalDays) * 100) || 0;
+
+          historicalPeriods.push({
+             label: p.label,
+             brushedPercent: pBrushedPercent,
+             goal3xPercent: pGoalPercent,
+             maxStreak: pMaxStreak,
+             mostMissed: pMostMissedCount > 0 ? shortDayNames[pMostMissed] : 'None',
+             isCustom: true,
+             endDateValue: pEnd.getTime()
+          });
+        }
+      });
+    }
+
+    // Auto-Generate Half-Year Chunks
     if (allUniqueDates.length > 0) {
       const earliest = parseISO(allUniqueDates[0]);
       let currentYear = earliest.getFullYear();
@@ -213,7 +270,9 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
                brushedPercent: pBrushedPercent,
                goal3xPercent: pGoalPercent,
                maxStreak: pMaxStreak,
-               mostMissed: pMostMissedCount > 0 ? shortDayNames[pMostMissed] : 'None'
+               mostMissed: pMostMissedCount > 0 ? shortDayNames[pMostMissed] : 'None',
+               isCustom: false,
+               endDateValue: calcEnd.getTime()
             });
         }
 
@@ -226,6 +285,9 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       }
     }
 
+    // Sort combined periods by end date descending
+    historicalPeriods.sort((a, b) => b.endDateValue - a.endDateValue);
+
     return { 
       empty: filteredRecords.length === 0,
       pieData, monthlyData, weekData, maxStreak, todaysCount, 
@@ -234,9 +296,9 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       bestDay: { name: dayNames[bestDay], count: bestDayCount },
       goal3xPercent, brushedPercent, totalDays,
       counts: { didNotBrush, once, twice, threeTimes },
-      historicalPeriods: historicalPeriods.reverse()
+      historicalPeriods: historicalPeriods
     };
-  }, [records, timeframe, customDateRange]);
+  }, [records, timeframe, customDateRange, customPeriods]);
 
   if (!stats) return <div className="text-center text-gray-500 mt-20">No data available. Log your first brush!</div>;
 
