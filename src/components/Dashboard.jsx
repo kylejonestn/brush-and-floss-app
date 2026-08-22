@@ -7,42 +7,16 @@ import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw, His
 import { THEMES } from '../utils/themes';
 import { ENCOURAGING_PHRASES } from '../utils/phrases';
 
-export default function Dashboard({ records, userName, themeIndex = 0, phraseIndex = 0, syncStatus, onLogin, customDateRange, customPeriods, cloudSyncEnabled = true, unlockedBackgrounds = ['bg1'] }) {
+export default function Dashboard({ records, userName, themeIndex = 0, phraseIndex = 0, syncStatus, onLogin, customDateRange, customPeriods, cloudSyncEnabled = true, unlockedBackgrounds = ['bg1'], globalCurrentStreak = 0, customBackgroundUrl = '' }) {
   const [timeframe, setTimeframe] = useState('Week');
 
-  const { globalCurrentStreak, activeBackground } = useMemo(() => {
-    let streak = 0;
-    if (records && records.length > 0) {
-       const allDays = new Set(records.map(r => r.timestamp.split('T')[0]));
-       let curr = new Date();
-       const todayStr = curr.toISOString().split('T')[0];
-       curr.setDate(curr.getDate() - 1);
-       const yesterdayStr = curr.toISOString().split('T')[0];
-       
-       let activeDate = new Date();
-       if (allDays.has(todayStr)) {
-          // brushed today
-       } else if (allDays.has(yesterdayStr)) {
-          activeDate.setDate(activeDate.getDate() - 1);
-       } else {
-          activeDate = null;
-       }
-       
-       if (activeDate) {
-          while (true) {
-             const dStr = activeDate.toISOString().split('T')[0];
-             if (allDays.has(dStr)) {
-                streak++;
-                activeDate.setDate(activeDate.getDate() - 1);
-             } else {
-                break;
-             }
-          }
-       }
+  const activeBgStyle = useMemo(() => {
+    if (globalCurrentStreak >= 15 && customBackgroundUrl) {
+       return { backgroundImage: `url('${customBackgroundUrl}')` };
     }
     
     let activeBg = 'bg1';
-    if (streak >= 7 && unlockedBackgrounds.length > 0) {
+    if (globalCurrentStreak >= 7 && unlockedBackgrounds.length > 0) {
        const now = new Date();
        const start = new Date(now.getFullYear(), 0, 0);
        const diff = (now - start) + ((start.getTimezoneOffset() - now.getTimezoneOffset()) * 60 * 1000);
@@ -50,9 +24,8 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
        const dayOfYear = Math.floor(diff / oneDay);
        activeBg = unlockedBackgrounds[dayOfYear % unlockedBackgrounds.length];
     }
-    
-    return { globalCurrentStreak: streak, activeBackground: activeBg };
-  }, [records, unlockedBackgrounds]);
+    return { backgroundImage: `url('${import.meta.env.BASE_URL}backgrounds/${activeBg}.jpg')` };
+  }, [globalCurrentStreak, unlockedBackgrounds, customBackgroundUrl]);
 
   const stats = useMemo(() => {
     if (!records || records.length === 0) return null;
@@ -405,7 +378,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
       <div className="relative rounded-b-[3rem] shadow-lg overflow-hidden transition-all duration-700">
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center grayscale mix-blend-multiply opacity-20"
-          style={{ backgroundImage: `url('/backgrounds/${activeBackground}.jpg')` }}
+          style={activeBgStyle}
         />
         <div className={`absolute inset-0 z-10 bg-gradient-to-br ${currentTheme.header} opacity-90`} />
         

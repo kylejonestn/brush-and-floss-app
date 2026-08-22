@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
 import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
@@ -20,6 +20,40 @@ function App() {
   const [customPeriods, setCustomPeriods] = useState([]);
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(true);
   const [unlockedBackgrounds, setUnlockedBackgrounds] = useState(['bg1']);
+  const [customBackgroundUrl, setCustomBackgroundUrl] = useState('');
+
+  const globalCurrentStreak = useMemo(() => {
+    let streak = 0;
+    if (records && records.length > 0) {
+       const allDays = new Set(records.map(r => r.timestamp.split('T')[0]));
+       let curr = new Date();
+       const todayStr = curr.toISOString().split('T')[0];
+       curr.setDate(curr.getDate() - 1);
+       const yesterdayStr = curr.toISOString().split('T')[0];
+       
+       let activeDate = new Date();
+       if (allDays.has(todayStr)) {
+          // brushed today
+       } else if (allDays.has(yesterdayStr)) {
+          activeDate.setDate(activeDate.getDate() - 1);
+       } else {
+          activeDate = null;
+       }
+       
+       if (activeDate) {
+          while (true) {
+             const dStr = activeDate.toISOString().split('T')[0];
+             if (allDays.has(dStr)) {
+                streak++;
+                activeDate.setDate(activeDate.getDate() - 1);
+             } else {
+                break;
+             }
+          }
+       }
+    }
+    return streak;
+  }, [records]);
 
   useEffect(() => {
     const cachedProfile = localStorage.getItem('brush_profile');
@@ -40,6 +74,9 @@ function App() {
 
     const cachedBackgrounds = localStorage.getItem('brush_unlocked_bgs');
     if (cachedBackgrounds) setUnlockedBackgrounds(JSON.parse(cachedBackgrounds));
+
+    const cachedCustomBg = localStorage.getItem('brush_custom_bg_url');
+    if (cachedCustomBg) setCustomBackgroundUrl(cachedCustomBg);
 
     const urlParams = new URLSearchParams(window.location.search);
     const unlock = urlParams.get('unlock');
@@ -105,7 +142,8 @@ function App() {
         settings: {
           customDateRange: dates,
           customPeriods: periods,
-          unlockedBackgrounds: bgs
+          unlockedBackgrounds: bgs,
+          customBackgroundUrl: localStorage.getItem('brush_custom_bg_url') || ''
         }
       };
       await writeDriveFile(accessToken, driveFileId, payload);
@@ -114,6 +152,12 @@ function App() {
       if (e.message && e.message.includes('401')) logout();
       else setSyncStatus('Error syncing');
     }
+  };
+
+  const handleUpdateCustomBackground = (url) => {
+    setCustomBackgroundUrl(url);
+    localStorage.setItem('brush_custom_bg_url', url);
+    triggerSettingsSync(customDateRange, customPeriods, records);
   };
 
   const updateCustomDates = (newDates) => {
@@ -213,6 +257,10 @@ function App() {
                 setUnlockedBackgrounds(combinedBgs);
                 localStorage.setItem('brush_unlocked_bgs', JSON.stringify(combinedBgs));
             }
+            if (remoteSettings.customBackgroundUrl !== undefined) {
+                setCustomBackgroundUrl(remoteSettings.customBackgroundUrl);
+                localStorage.setItem('brush_custom_bg_url', remoteSettings.customBackgroundUrl);
+            }
         }
 
         setRecords(mergedData);
@@ -223,7 +271,8 @@ function App() {
             settings: {
                 customDateRange: nextDates,
                 customPeriods: nextPeriods,
-                unlockedBackgrounds: nextBackgrounds
+                unlockedBackgrounds: nextBackgrounds,
+                customBackgroundUrl: localStorage.getItem('brush_custom_bg_url') || ''
             }
         };
         await writeDriveFile(accessToken, fileId, newPayload);
@@ -302,6 +351,9 @@ function App() {
               cloudSyncEnabled={cloudSyncEnabled}
               onToggleCloudSync={handleToggleCloudSync}
               onClose={() => setShowSettings(false)}
+              globalCurrentStreak={globalCurrentStreak}
+              customBackgroundUrl={customBackgroundUrl}
+              onUpdateCustomBackground={handleUpdateCustomBackground}
            />
            <div className="mt-8 bg-white p-6 rounded-2xl shadow-sm text-center">
              <p className="text-gray-500 text-sm mb-4">Need to share your data with your dentist?</p>
@@ -322,6 +374,8 @@ function App() {
           customPeriods={customPeriods}
           cloudSyncEnabled={cloudSyncEnabled}
           unlockedBackgrounds={unlockedBackgrounds}
+          globalCurrentStreak={globalCurrentStreak}
+          customBackgroundUrl={customBackgroundUrl}
         />
       )}
 
