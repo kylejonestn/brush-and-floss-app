@@ -151,16 +151,32 @@ function App() {
   };
 
   const exportPDF = () => {
-    const element = document.getElementById('export-pdf-area');
-    if (!element) return;
-    const opt = {
-      margin: 0.5,
-      filename: `${profile?.name || 'My'}_Brush_and_Floss_Report.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    html2pdf().set(opt).from(element).save();
+    // The Dashboard must be visible to capture it
+    setShowSettings(false);
+    
+    // Wait for the DOM to update and render the Dashboard charts
+    setTimeout(() => {
+      const element = document.getElementById('export-pdf-area');
+      if (!element) return;
+      
+      const opt = {
+        margin: 0.5,
+        filename: `${profile?.name || 'My'}_Brush_and_Floss_Report.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      
+      try {
+        // Handle potential Vite ES module interop issues
+        const generatePdf = typeof html2pdf === 'function' ? html2pdf : html2pdf.default;
+        generatePdf().set(opt).from(element).save();
+      } catch (e) {
+        console.error("PDF Export Error: ", e);
+        alert("There was an issue generating the PDF. You can also use your browser's Print feature to save as PDF.");
+        window.print();
+      }
+    }, 800);
   };
 
   if (!profile) {
