@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
 import html2pdf from 'html2pdf.js';
 import Dashboard from './components/Dashboard';
-import Report from './components/Report';
 import Settings from './components/Settings';
+import BottomNav from './components/BottomNav';
 import { initDriveSync, readDriveFile, writeDriveFile } from './utils/driveSync';
 
 function App() {
@@ -22,12 +22,13 @@ function App() {
         console.error("Failed to parse cached records");
       }
     } else {
-      // Fallback: load migrated old data on first run
-      fetch('/data.json')
+      fetch('/brush-and-floss-app/data.json')
         .then(res => res.json())
         .then(data => {
-          setRecords(data);
-          localStorage.setItem('brush_records', JSON.stringify(data));
+          if(Array.isArray(data)) {
+             setRecords(data);
+             localStorage.setItem('brush_records', JSON.stringify(data));
+          }
         })
         .catch(console.error);
     }
@@ -114,10 +115,6 @@ function App() {
     mergeAndSaveData([newRecord]);
   };
 
-  const handleImportData = (importedRecords) => {
-    mergeAndSaveData(importedRecords);
-  };
-
   const exportPDF = () => {
     const element = document.getElementById('export-pdf-area');
     if (!element) return;
@@ -132,60 +129,42 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white font-sans flex flex-col">
-      <div className="max-w-4xl mx-auto px-4 py-8 flex-grow w-full">
-        
-        <div className="flex justify-end items-center mb-4">
-          <div className="text-sm text-gray-400 mr-4">
-            Status: {syncStatus}
-          </div>
-          {!accessToken && (
-            <button 
-              onClick={() => login()}
-              className="bg-white text-black px-4 py-2 rounded font-medium text-sm hover:bg-gray-200"
-            >
-              Sign in to Sync
-            </button>
-          )}
+    <div className="bg-[#f4f7fb] min-h-screen text-[#1a1a1a] font-sans mx-auto max-w-md relative shadow-2xl overflow-hidden" id="export-pdf-area">
+      
+      {showSettings ? (
+        <div className="pt-12 px-6 pb-32">
+           <Settings 
+              records={records} 
+              accessToken={accessToken} 
+              onLogin={login} 
+              onLogout={logout} 
+              onImportData={mergeAndSaveData}
+              onClose={() => setShowSettings(false)}
+           />
+           
+           <div className="mt-8 bg-white p-6 rounded-2xl shadow-sm text-center">
+             <p className="text-gray-500 text-sm mb-4">Need to share your data with your dentist?</p>
+             <button onClick={exportPDF} className="bg-[#2d3a70] text-white px-6 py-3 rounded-xl font-medium w-full">
+                Export Report PDF
+             </button>
+           </div>
         </div>
+      ) : (
+        <Dashboard records={records} />
+      )}
 
-        {showSettings ? (
-          <Settings 
-            records={records} 
-            accessToken={accessToken} 
-            onLogin={login} 
-            onLogout={logout} 
-            onImportData={handleImportData}
-            onClose={() => setShowSettings(false)}
-          />
-        ) : (
-          <>
-            <Dashboard records={records} onLogBrush={handleLogBrush} />
-            
-            <div className="mt-20 border-t border-gray-800 pt-12 relative">
-              <div className="absolute right-0 top-12">
-                 <button 
-                    onClick={exportPDF}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium text-sm transition-colors"
-                 >
-                    Export PDF
-                 </button>
-              </div>
-              <Report records={records} />
-            </div>
-          </>
-        )}
-      </div>
+      {/* Sync Status Banner */}
+      {accessToken && syncStatus !== 'Synced' && (
+         <div className="absolute top-2 right-2 text-xs text-white bg-black bg-opacity-20 px-2 py-1 rounded-full z-50">
+            {syncStatus}
+         </div>
+      )}
 
-      {/* Footer */}
-      <footer className="w-full text-center py-6 text-gray-500 text-sm border-t border-gray-800">
-        <button 
-          onClick={() => setShowSettings(!showSettings)}
-          className="hover:text-white transition-colors"
-        >
-          {showSettings ? 'Back to Dashboard' : 'Settings & Import Data'}
-        </button>
-      </footer>
+      <BottomNav 
+         onLogBrush={handleLogBrush} 
+         showSettings={showSettings} 
+         onToggleSettings={setShowSettings} 
+      />
     </div>
   );
 }
