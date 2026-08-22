@@ -6,8 +6,8 @@ import { parseISO, format, differenceInDays, startOfDay, subDays, isToday, isYes
 import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { THEMES } from '../utils/themes';
 
-export default function Dashboard({ records, userName, themeIndex = 0, syncStatus }) {
-  const [timeframe, setTimeframe] = useState('All Time');
+export default function Dashboard({ records, userName, themeIndex = 0, syncStatus, onLogin }) {
+  const [timeframe, setTimeframe] = useState('Week');
 
   const stats = useMemo(() => {
     if (!records || records.length === 0) return null;
@@ -130,6 +130,12 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
 
   const currentTheme = THEMES[themeIndex % THEMES.length];
 
+  const handleCloudClick = () => {
+    if (syncStatus === 'Not Synced' || syncStatus === 'Error syncing') {
+      if (onLogin) onLogin();
+    }
+  };
+
   const renderSyncIcon = () => {
     switch(syncStatus) {
       case 'Synced':
@@ -137,7 +143,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       case 'Syncing':
          return <RefreshCw size={24} className="text-white/80 animate-spin transition-all duration-300" />;
       default: // 'Not Synced' or 'Error syncing'
-         return <CloudOff size={24} className="text-white/50 transition-all duration-300" />;
+         return <CloudOff size={24} className="text-white/50 transition-all duration-300 group-hover:text-white" />;
     }
   };
 
@@ -150,9 +156,13 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
             <h1 className="text-3xl font-light mb-1">Hi {userName || 'There'}</h1>
             <p className="text-white/80 text-sm">Keep your smile bright</p>
           </div>
-          <div title={`Cloud Status: ${syncStatus}`}>
+          <button 
+             onClick={handleCloudClick}
+             title={syncStatus === 'Not Synced' || syncStatus === 'Error syncing' ? 'Click to reconnect to Google Drive' : `Cloud Status: ${syncStatus}`}
+             className={`group focus:outline-none ${(syncStatus === 'Not Synced' || syncStatus === 'Error syncing') ? 'cursor-pointer hover:scale-110 active:scale-95 transition-transform' : 'cursor-default'}`}
+          >
              {renderSyncIcon()}
-          </div>
+          </button>
         </div>
         
         <div className="flex flex-col items-center mt-2 animate-fade-in-up">
