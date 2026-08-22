@@ -155,6 +155,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
       const dateKey = format(d, 'yyyy-MM-dd');
       weekData.push({
         name: format(d, 'EEE').substring(0, 1),
+        fullName: format(d, 'EEE'),
         value: allByDay[dateKey] || 0
       });
     }
@@ -434,7 +435,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
           <div className="h-32 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.weekData}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dy={5} />
+                <XAxis dataKey="fullName" tickFormatter={(val) => val.substring(0, 1)} axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dy={5} />
                 <Bar dataKey="value" radius={[10, 10, 10, 10]} barSize={16}>
                   {stats.weekData.map((entry, index) => (
                     <Cell 
