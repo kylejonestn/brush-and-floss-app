@@ -3,3 +3,20 @@
 body {
   background-color: #e5e7eb;
 }
+
+@media print {
+  body {
+    background-color: white !important;
+  }
+  #export-pdf-area {
+    box-shadow: none !important;
+    max-width: 100% !important;
+    background-color: white !important;
+    padding-bottom: 0 !important;
+  }
+  /* Hide Bottom Nav on Print */
+  nav, .fixed.bottom-0, .pb-32 {
+    display: none !important;
+    padding-bottom: 0 !important;
+  }
+}

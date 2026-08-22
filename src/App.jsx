@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
-import html2pdf from 'html2pdf.js';
 import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
 import BottomNav from './components/BottomNav';
@@ -171,24 +170,9 @@ function App() {
 
   const exportPDF = () => {
     setShowSettings(false);
+    // Give it a split second to mount the Dashboard, then open native print dialog
     setTimeout(() => {
-      const element = document.getElementById('export-pdf-area');
-      if (!element) return;
-      const opt = {
-        margin: 0.5,
-        filename: `${profile?.name || 'My'}_Brush_and_Floss_Report.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-      try {
-        const generatePdf = typeof html2pdf === 'function' ? html2pdf : html2pdf.default;
-        generatePdf().set(opt).from(element).save();
-      } catch (e) {
-        console.error("PDF Export Error: ", e);
-        alert("There was an issue generating the PDF. You can also use your browser's Print feature to save as PDF.");
-        window.print();
-      }
+      window.print();
     }, 800);
   };
 
