@@ -3,10 +3,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell,
   AreaChart, Area
 } from 'recharts';
-import { parseISO, format, differenceInDays, startOfDay, subDays } from 'date-fns';
+import { parseISO, format, differenceInDays, startOfDay, subDays, isToday, isYesterday } from 'date-fns';
 import { Settings, CheckSquare } from 'lucide-react';
+import { THEMES } from '../utils/themes';
 
-export default function Dashboard({ records, userName }) {
+export default function Dashboard({ records, userName, themeIndex = 0 }) {
   const [timeframe, setTimeframe] = useState('Week');
 
   const stats = useMemo(() => {
@@ -58,26 +59,49 @@ export default function Dashboard({ records, userName }) {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const todaysCount = byDay[todayStr] || 0;
 
-    return { weekData, monthlyData, maxStreak, todaysCount, totalRecords: records.length };
+    // Determine the last brush time string
+    const lastRecord = records[records.length - 1];
+    let lastBrushText = "";
+    if (lastRecord) {
+      const lastDateObj = parseISO(lastRecord.timestamp);
+      const timeStr = format(lastDateObj, 'h:mm a');
+      if (isToday(lastDateObj)) {
+        lastBrushText = `Today at ${timeStr}`;
+      } else if (isYesterday(lastDateObj)) {
+        lastBrushText = `Yesterday at ${timeStr}`;
+      } else {
+        lastBrushText = `${format(lastDateObj, 'MMM d')} at ${timeStr}`;
+      }
+    }
+
+    return { weekData, monthlyData, maxStreak, todaysCount, totalRecords: records.length, lastBrushText };
   }, [records]);
 
   if (!stats) return <div className="text-center text-gray-500 mt-20">No data available. Log your first brush!</div>;
 
+  const currentTheme = THEMES[themeIndex % THEMES.length];
+  const chartColor = currentTheme.nav.replace('bg-', 'text-'); // rough approx, we'll use a hardcoded fallback
+  const barActiveColor = '#2d3a70'; // Keep simple for now or derive it
+
   return (
-    <div className="pb-32 bg-[#f4f7fb] min-h-screen">
+    <div className="pb-32 bg-[#f4f7fb] min-h-screen transition-colors duration-500">
       
-      <div className="bg-gradient-to-br from-[#4c60a4] to-[#2d3a70] text-white rounded-b-[3rem] px-8 pt-12 pb-16 shadow-lg relative">
-        <div className="flex justify-between items-start mb-6">
+      <div className={`bg-gradient-to-br ${currentTheme.header} text-white rounded-b-[3rem] px-8 pt-12 pb-16 shadow-lg relative transition-all duration-700`}>
+        <div className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-3xl font-light mb-1">Hi {userName || 'There'}</h1>
-            <p className="text-indigo-200 text-sm">Keep your smile bright</p>
+            <p className="text-white/80 text-sm">Keep your smile bright</p>
           </div>
-          <Settings size={24} className="text-indigo-200 opacity-80" />
+          <Settings size={24} className="text-white/80" />
         </div>
         
-        <div className="flex justify-center mt-4">
-          <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden shadow-xl bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center mt-2 animate-fade-in-up">
+          <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden shadow-xl bg-white flex items-center justify-center transition-transform duration-300 hover:scale-105">
             <span className="text-4xl">🦷</span>
+          </div>
+          <div className="mt-3 text-center">
+            <p className="text-xs text-white/70 uppercase tracking-widest font-semibold">Last Logged</p>
+            <p className="text-sm font-medium mt-0.5">{stats.lastBrushText}</p>
           </div>
         </div>
       </div>
@@ -87,7 +111,7 @@ export default function Dashboard({ records, userName }) {
           <button 
             key={t}
             onClick={() => setTimeframe(t)}
-            className={`pb-1 px-2 ${timeframe === t ? 'text-[#2d3a70] border-b-4 border-[#2d3a70] rounded-sm' : ''}`}
+            className={`pb-1 px-2 transition-colors ${timeframe === t ? 'text-gray-800 border-b-4 border-gray-800 rounded-sm' : ''}`}
           >
             {t}
           </button>
@@ -105,7 +129,7 @@ export default function Dashboard({ records, userName }) {
                 <BarChart data={stats.weekData}>
                   <Bar dataKey="value" radius={[10, 10, 10, 10]} barSize={8}>
                     {stats.weekData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.value >= 2 ? '#2d3a70' : '#c3cae8'} />
+                      <Cell key={`cell-${index}`} fill={entry.value >= 2 ? '#4b5563' : '#e5e7eb'} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -122,14 +146,14 @@ export default function Dashboard({ records, userName }) {
                <CheckSquare size={64} />
              </div>
              <div>
-                <h3 className="text-[#6d79b2] font-semibold text-lg mb-1">Max Streak</h3>
-                <div className="text-4xl font-bold text-[#2d3a70]">{stats.maxStreak}</div>
+                <h3 className="text-gray-500 font-semibold text-lg mb-1">Max Streak</h3>
+                <div className="text-4xl font-bold text-gray-800">{stats.maxStreak}</div>
                 <p className="text-xs text-gray-400 mt-1">Days in a row</p>
              </div>
              
              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="text-[#6d79b2] font-medium text-sm mb-1">Total Logs</div>
-                <div className="text-xl font-bold text-[#2d3a70]">{stats.totalRecords}</div>
+                <div className="text-gray-500 font-medium text-sm mb-1">Total Logs</div>
+                <div className="text-xl font-bold text-gray-800">{stats.totalRecords}</div>
              </div>
           </div>
         </div>
@@ -141,19 +165,19 @@ export default function Dashboard({ records, userName }) {
               <AreaChart data={stats.monthlyData}>
                 <defs>
                   <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b9be0" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#8b9be0" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#9ca3af" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <Tooltip cursor={false} contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}}/>
                 <Area 
                   type="monotone" 
                   dataKey="total" 
-                  stroke="#8b9be0" 
+                  stroke="#9ca3af" 
                   strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorTotal)" 
-                  activeDot={{r: 6, fill: '#2d3a70', strokeWidth: 0}}
+                  activeDot={{r: 6, fill: '#4b5563', strokeWidth: 0}}
                 />
               </AreaChart>
             </ResponsiveContainer>

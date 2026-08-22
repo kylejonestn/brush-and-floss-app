@@ -14,15 +14,15 @@ function App() {
   const [driveFileId, setDriveFileId] = useState(null);
   const [syncStatus, setSyncStatus] = useState('Not Synced');
   const [showSettings, setShowSettings] = useState(false);
+  const [themeIndex, setThemeIndex] = useState(0);
 
   useEffect(() => {
-    // Load Profile
     const cachedProfile = localStorage.getItem('brush_profile');
-    if (cachedProfile) {
-      setProfile(JSON.parse(cachedProfile));
-    }
+    if (cachedProfile) setProfile(JSON.parse(cachedProfile));
 
-    // Load Records
+    const cachedTheme = localStorage.getItem('brush_theme_index');
+    if (cachedTheme) setThemeIndex(parseInt(cachedTheme, 10));
+
     const cachedRecords = localStorage.getItem('brush_records');
     if (cachedRecords) {
       try {
@@ -116,6 +116,11 @@ function App() {
       action: 'brush_and_floss'
     };
     mergeAndSaveData([newRecord]);
+
+    // Rotate theme
+    const nextTheme = (themeIndex + 1) % 7;
+    setThemeIndex(nextTheme);
+    localStorage.setItem('brush_theme_index', nextTheme.toString());
   };
 
   const exportPDF = () => {
@@ -155,7 +160,7 @@ function App() {
            </div>
         </div>
       ) : (
-        <Dashboard records={records} userName={profile.name} />
+        <Dashboard records={records} userName={profile.name} themeIndex={themeIndex} />
       )}
 
       {accessToken && syncStatus !== 'Synced' && (
@@ -167,7 +172,8 @@ function App() {
       <BottomNav 
          onLogBrush={handleLogBrush} 
          showSettings={showSettings} 
-         onToggleSettings={setShowSettings} 
+         onToggleSettings={setShowSettings}
+         themeIndex={themeIndex}
       />
     </div>
   );
