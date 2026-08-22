@@ -344,13 +344,15 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
             <h1 className="text-3xl font-light mb-1">Hi {userName || 'There'}</h1>
             <p className="text-white/80 text-sm">{ENCOURAGING_PHRASES[phraseIndex] || "Keep your smile bright"}</p>
           </div>
-          <button 
-             onClick={handleCloudClick}
-             title={syncStatus === 'Not Synced' || syncStatus === 'Error syncing' ? 'Click to reconnect to Google Drive' : `Cloud Status: ${syncStatus}`}
-             className={`group focus:outline-none ${(syncStatus === 'Not Synced' || syncStatus === 'Error syncing') ? 'cursor-pointer' : 'cursor-default'}`}
-          >
-             {renderSyncIcon()}
-          </button>
+          {cloudSyncEnabled && (
+            <button 
+              onClick={handleCloudClick}
+              title={syncStatus === 'Not Synced' || syncStatus === 'Error syncing' ? 'Click to reconnect to Google Drive' : `Cloud Status: ${syncStatus}`}
+              className={`group focus:outline-none ${(syncStatus === 'Not Synced' || syncStatus === 'Error syncing') ? 'cursor-pointer' : 'cursor-default'}`}
+            >
+              {renderSyncIcon()}
+            </button>
+          )}
         </div>
         
         <div className="flex flex-col items-center mt-2 animate-fade-in-up">

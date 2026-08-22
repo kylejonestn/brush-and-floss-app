@@ -15,6 +15,8 @@ export default function Settings({
   customPeriods,
   addCustomPeriod,
   removeCustomPeriod,
+  cloudSyncEnabled,
+  onToggleCloudSync,
   onClose 
 }) {
   const fileInputRef = useRef(null);
@@ -146,6 +148,54 @@ ${generateEvent(reminderTime1)}${generateEvent(reminderTime2)}END:VCALENDAR`;
       </div>
 
       <div className="mb-8 border-b pb-8">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800">Cloud Sync</h3>
+            <p className="text-gray-500 text-sm mt-1 max-w-[200px]">
+              Enable Google Drive to securely backup your data.
+            </p>
+          </div>
+          <button 
+             onClick={() => onToggleCloudSync(!cloudSyncEnabled)}
+             className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out mt-1 ${cloudSyncEnabled ? 'bg-emerald-500' : 'bg-gray-300'}`}
+          >
+             <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${cloudSyncEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+        
+        {cloudSyncEnabled && (
+          <div className="mt-5 animate-fade-in-up">
+            {accessToken ? (
+              <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="text-emerald-800 font-medium text-sm">Connected to Google Drive</p>
+                  <p className="text-emerald-600/80 text-xs mt-0.5">Your data is synced safely.</p>
+                </div>
+                <button 
+                  onClick={onLogout}
+                  className="text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => onLogin()}
+                className="w-full bg-[#2d3a70] hover:bg-[#3b4b94] text-white py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 shadow-sm"
+              >
+                Connect to Google Drive
+              </button>
+            )}
+          </div>
+        )}
+        {!cloudSyncEnabled && (
+           <div className="mt-3 bg-gray-50 text-gray-500 text-xs p-3 rounded-lg border border-gray-100">
+             Cloud Sync is currently disabled. The app is running strictly in offline mode on your device.
+           </div>
+        )}
+      </div>
+
+      <div className="mb-8 border-b pb-8">
         <h3 className="text-xl font-semibold mb-3 text-gray-800">Custom Timeframe</h3>
         <p className="text-sm text-gray-600 mb-4">
           Set a custom date range (e.g., between dentist visits) for your Dashboard's "Custom" tab.
@@ -227,35 +277,6 @@ ${generateEvent(reminderTime1)}${generateEvent(reminderTime2)}END:VCALENDAR`;
                 </div>
              ))}
           </div>
-        )}
-      </div>
-
-      <div className="mb-8 border-b pb-8">
-        <h3 className="text-xl font-semibold mb-3 text-gray-800">Cloud Sync</h3>
-        <p className="text-gray-500 text-sm mb-4">
-          Connect your Google Drive to securely backup and sync your data across devices.
-        </p>
-        
-        {accessToken ? (
-          <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center justify-between">
-            <div>
-              <p className="text-emerald-800 font-medium text-sm">Connected to Google Drive</p>
-              <p className="text-emerald-600/80 text-xs mt-0.5">Your data is synced safely.</p>
-            </div>
-            <button 
-              onClick={onLogout}
-              className="text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-            >
-              Disconnect
-            </button>
-          </div>
-        ) : (
-          <button 
-            onClick={() => onLogin()}
-            className="w-full bg-[#2d3a70] hover:bg-[#3b4b94] text-white py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 shadow-sm"
-          >
-            Connect to Google Drive
-          </button>
         )}
       </div>
 

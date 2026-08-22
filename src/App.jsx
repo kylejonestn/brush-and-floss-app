@@ -18,6 +18,7 @@ function App() {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
   const [customPeriods, setCustomPeriods] = useState([]);
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState(true);
 
   useEffect(() => {
     const cachedProfile = localStorage.getItem('brush_profile');
@@ -35,6 +36,9 @@ function App() {
 
     const cachedPeriods = localStorage.getItem('brush_custom_periods');
     if (cachedPeriods) setCustomPeriods(JSON.parse(cachedPeriods));
+
+    const cachedSyncEnabled = localStorage.getItem('brush_sync_enabled');
+    if (cachedSyncEnabled !== null) setCloudSyncEnabled(cachedSyncEnabled === 'true');
 
     const cachedToken = localStorage.getItem('brush_access_token');
     const tokenExpiry = localStorage.getItem('brush_token_expiry');
@@ -107,8 +111,16 @@ function App() {
     localStorage.removeItem('brush_token_expiry');
   };
 
+  const handleToggleCloudSync = (enabled) => {
+    setCloudSyncEnabled(enabled);
+    localStorage.setItem('brush_sync_enabled', enabled.toString());
+    if (!enabled && accessToken) {
+      logout();
+    }
+  };
+
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || !cloudSyncEnabled) return;
     async function syncData() {
       try {
         setSyncStatus('Syncing');
@@ -134,12 +146,12 @@ function App() {
       }
     }
     syncData();
-  }, [accessToken]);
+  }, [accessToken, cloudSyncEnabled]);
 
   const saveAndSyncRecords = async (newRecordsArray) => {
     setRecords(newRecordsArray);
     localStorage.setItem('brush_records', JSON.stringify(newRecordsArray));
-    if (accessToken && driveFileId) {
+    if (cloudSyncEnabled && accessToken && driveFileId) {
       setSyncStatus('Syncing');
       try {
         await writeDriveFile(accessToken, driveFileId, newRecordsArray);
@@ -207,6 +219,8 @@ function App() {
               customPeriods={customPeriods}
               addCustomPeriod={addCustomPeriod}
               removeCustomPeriod={removeCustomPeriod}
+              cloudSyncEnabled={cloudSyncEnabled}
+              onToggleCloudSync={handleToggleCloudSync}
               onClose={() => setShowSettings(false)}
            />
            <div className="mt-8 bg-white p-6 rounded-2xl shadow-sm text-center">
@@ -226,6 +240,7 @@ function App() {
           onLogin={login}
           customDateRange={customDateRange}
           customPeriods={customPeriods}
+          cloudSyncEnabled={cloudSyncEnabled}
         />
       )}
 
