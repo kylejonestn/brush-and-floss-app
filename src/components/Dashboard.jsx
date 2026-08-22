@@ -3,7 +3,7 @@ import {
   BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis 
 } from 'recharts';
 import { parseISO, format, differenceInDays, startOfDay, endOfDay, subDays, isToday, isYesterday, isAfter, isBefore } from 'date-fns';
-import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw, History } from 'lucide-react';
 import { THEMES } from '../utils/themes';
 
 export default function Dashboard({ records, userName, themeIndex = 0, syncStatus, onLogin, customDateRange }) {
@@ -23,11 +23,7 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
     } else if (timeframe === 'Custom') {
       if (customDateRange?.start) startDate = startOfDay(parseISO(customDateRange.start));
       if (customDateRange?.end) endDate = endOfDay(parseISO(customDateRange.end));
-      
-      // If end date is in the future, cap it at today so "Did Not Brush" doesn't count future days
-      if (endDate > endOfDay(now)) {
-        endDate = endOfDay(now);
-      }
+      if (endDate > endOfDay(now)) endDate = endOfDay(now);
     }
     
     const filteredRecords = records.filter(r => {
@@ -38,10 +34,8 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       return ok;
     });
 
-    if (filteredRecords.length === 0) return { empty: true };
-
     const byDay = {};
-    const allByDay = {}; // For the 7-day chart which ignores timeframe filter
+    const allByDay = {}; 
     records.forEach(r => {
       const dateKey = format(parseISO(r.timestamp), 'yyyy-MM-dd');
       allByDay[dateKey] = (allByDay[dateKey] || 0) + 1;
@@ -54,12 +48,10 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
 
     const uniqueDates = Object.keys(byDay).sort();
     
-    // Determine the actual date range for calculation
     let firstDate = startDate;
     if (!firstDate && uniqueDates.length > 0) {
-      firstDate = parseISO(uniqueDates[0]); // All Time fallback
+      firstDate = parseISO(uniqueDates[0]);
     }
-
     let lastDate = endDate;
     if (!lastDate) {
       lastDate = startOfDay(now);
@@ -72,31 +64,34 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
     const missedDaysOfWeek = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
     const hitDaysOfWeek = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
 
-    let current = startOfDay(firstDate);
-    const end = startOfDay(lastDate);
+    if (filteredRecords.length > 0) {
+      let current = startOfDay(firstDate);
+      const end = startOfDay(lastDate);
 
-    while (current <= end) {
-      const dateKey = format(current, 'yyyy-MM-dd');
-      const count = byDay[dateKey] || 0;
-      const dayOfWeek = current.getDay();
+      while (current <= end) {
+        const dateKey = format(current, 'yyyy-MM-dd');
+        const count = byDay[dateKey] || 0;
+        const dayOfWeek = current.getDay();
 
-      if (count === 0) {
-        didNotBrush++;
-        currentStreak = 0;
-        missedDaysOfWeek[dayOfWeek]++;
-      } else {
-        if (count === 1) once++;
-        if (count === 2) twice++;
-        if (count >= 3) threeTimes++;
-        
-        currentStreak++;
-        if (currentStreak > maxStreak) maxStreak = currentStreak;
-        hitDaysOfWeek[dayOfWeek]++;
+        if (count === 0) {
+          didNotBrush++;
+          currentStreak = 0;
+          missedDaysOfWeek[dayOfWeek]++;
+        } else {
+          if (count === 1) once++;
+          if (count === 2) twice++;
+          if (count >= 3) threeTimes++;
+          
+          currentStreak++;
+          if (currentStreak > maxStreak) maxStreak = currentStreak;
+          hitDaysOfWeek[dayOfWeek]++;
+        }
+        current.setDate(current.getDate() + 1);
       }
-      current.setDate(current.getDate() + 1);
     }
 
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const shortDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
     let mostMissed = 0, mostMissedCount = -1;
     Object.keys(missedDaysOfWeek).forEach(d => {
@@ -156,13 +151,90 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
       else lastBrushText = `${format(lastDateObj, 'MMM d')} at ${timeStr}`;
     }
 
+    // --- Generate Historical Comparison (Half-Year Chunks) ignoring timeframe ---
+    const historicalPeriods = [];
+    const allUniqueDates = Object.keys(allByDay).sort();
+    if (allUniqueDates.length > 0) {
+      const earliest = parseISO(allUniqueDates[0]);
+      let currentYear = earliest.getFullYear();
+      let currentHalf = earliest.getMonth() < 6 ? 1 : 2;
+      const latestYear = now.getFullYear();
+      const latestHalf = now.getMonth() < 6 ? 1 : 2;
+
+      while (currentYear < latestYear || (currentYear === latestYear && currentHalf <= latestHalf)) {
+        const pStartMonth = currentHalf === 1 ? 0 : 6;
+        const pEndMonth = currentHalf === 1 ? 5 : 11;
+        
+        const periodStart = new Date(currentYear, pStartMonth, 1);
+        const periodEnd = new Date(currentYear, pEndMonth + 1, 0, 23, 59, 59, 999);
+        
+        let calcEnd = periodEnd > now ? now : periodEnd;
+        let pTotalDays = differenceInDays(startOfDay(calcEnd), startOfDay(periodStart)) + 1;
+
+        if (pTotalDays > 0) {
+            let pDidNotBrush = 0, pThreeTimes = 0;
+            let pMaxStreak = 0, pCurrentStreak = 0;
+            const pMissedDays = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
+
+            let curr = startOfDay(periodStart);
+            const pEnd = startOfDay(calcEnd);
+
+            while (curr <= pEnd) {
+              const dateKey = format(curr, 'yyyy-MM-dd');
+              const count = allByDay[dateKey] || 0;
+              const dayOfWeek = curr.getDay();
+
+              if (count === 0) {
+                pDidNotBrush++;
+                pCurrentStreak = 0;
+                pMissedDays[dayOfWeek]++;
+              } else {
+                if (count >= 3) pThreeTimes++;
+                pCurrentStreak++;
+                if (pCurrentStreak > pMaxStreak) pMaxStreak = pCurrentStreak;
+              }
+              curr.setDate(curr.getDate() + 1);
+            }
+
+            let pMostMissed = 0, pMostMissedCount = -1;
+            Object.keys(pMissedDays).forEach(d => {
+              if (pMissedDays[d] > pMostMissedCount) {
+                pMostMissedCount = pMissedDays[d];
+                pMostMissed = d;
+              }
+            });
+
+            const label = currentHalf === 1 ? `Jan-Jun ${currentYear}` : `Jul-Dec ${currentYear}`;
+            const pBrushedPercent = Math.round(((pTotalDays - pDidNotBrush) / pTotalDays) * 100) || 0;
+            const pGoalPercent = Math.round((pThreeTimes / pTotalDays) * 100) || 0;
+
+            historicalPeriods.push({
+               label,
+               brushedPercent: pBrushedPercent,
+               goal3xPercent: pGoalPercent,
+               maxStreak: pMaxStreak,
+               mostMissed: pMostMissedCount > 0 ? shortDayNames[pMostMissed] : 'None'
+            });
+        }
+
+        if (currentHalf === 1) {
+          currentHalf = 2;
+        } else {
+          currentHalf = 1;
+          currentYear++;
+        }
+      }
+    }
+
     return { 
+      empty: filteredRecords.length === 0,
       pieData, monthlyData, weekData, maxStreak, todaysCount, 
       totalRecords: filteredRecords.length, lastBrushText,
       mostMissed: { name: dayNames[mostMissed], count: mostMissedCount },
       bestDay: { name: dayNames[bestDay], count: bestDayCount },
       goal3xPercent, brushedPercent, totalDays,
-      counts: { didNotBrush, once, twice, threeTimes }
+      counts: { didNotBrush, once, twice, threeTimes },
+      historicalPeriods: historicalPeriods.reverse()
     };
   }, [records, timeframe, customDateRange]);
 
@@ -241,144 +313,175 @@ export default function Dashboard({ records, userName, themeIndex = 0, syncStatu
         ))}
       </div>
 
-      {stats.empty ? (
-         <div className="text-center mt-12 text-gray-400 px-6">
-           No data for this timeframe. {timeframe === 'Custom' && "Check your Custom Timeframe in Settings."}
-         </div>
-      ) : (
-        <div className="px-6 mt-8 space-y-6">
-          
-          <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-gray-500 font-medium text-sm">Recent Activity</h3>
-              <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Last 7 Days</span>
-            </div>
-            <div className="h-32 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.weekData}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dy={5} />
-                  <Bar dataKey="value" radius={[10, 10, 10, 10]} barSize={16}>
-                    {stats.weekData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.value >= 3 ? '#374151' : (entry.value === 2 ? '#4b5563' : (entry.value === 1 ? '#9ca3af' : '#e5e7eb'))} 
-                      />
-                    ))}
-                  </Bar>
-                  <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+      <div className="px-6 mt-8 space-y-6">
+        
+        {/* 7-Day Frequency Bar Chart (always visible regardless of timeframe filter) */}
+        <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-gray-500 font-medium text-sm">Recent Activity</h3>
+            <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Last 7 Days</span>
           </div>
+          <div className="h-32 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.weekData}>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dy={5} />
+                <Bar dataKey="value" radius={[10, 10, 10, 10]} barSize={16}>
+                  {stats.weekData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.value >= 3 ? '#374151' : (entry.value === 2 ? '#4b5563' : (entry.value === 1 ? '#9ca3af' : '#e5e7eb'))} 
+                    />
+                  ))}
+                </Bar>
+                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-          <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-gray-500 font-medium text-sm">Habit Breakdown</h3>
-              <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{stats.totalDays} Days</span>
-            </div>
-            
-            <div className="flex items-center">
-              <div className="w-1/2 h-32 relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats.pieData}
-                      innerRadius={35}
-                      outerRadius={55}
-                      paddingAngle={5}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {stats.pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                  <span className="text-xl font-bold text-gray-800">{stats.brushedPercent}%</span>
-                </div>
+        {stats.empty ? (
+           <div className="text-center py-12 text-gray-400 bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+             No data for this timeframe. {timeframe === 'Custom' && "Check your Custom Timeframe in Settings."}
+           </div>
+        ) : (
+           <>
+            <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-gray-500 font-medium text-sm">Habit Breakdown</h3>
+                <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{stats.totalDays} Days</span>
               </div>
               
-              <div className="w-1/2 pl-2 space-y-2 text-sm">
-                 <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#374151]"></span>3x</span> <span className="font-semibold">{stats.counts.threeTimes}</span></div>
-                 <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#6b7280]"></span>2x</span> <span className="font-semibold">{stats.counts.twice}</span></div>
-                 <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#9ca3af]"></span>1x</span> <span className="font-semibold">{stats.counts.once}</span></div>
-                 <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#e5e7eb]"></span>0x</span> <span className="font-semibold text-gray-400">{stats.counts.didNotBrush}</span></div>
+              <div className="flex items-center">
+                <div className="w-1/2 h-32 relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.pieData}
+                        innerRadius={35}
+                        outerRadius={55}
+                        paddingAngle={5}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {stats.pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                    <span className="text-xl font-bold text-gray-800">{stats.brushedPercent}%</span>
+                  </div>
+                </div>
+                
+                <div className="w-1/2 pl-2 space-y-2 text-sm">
+                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#374151]"></span>3x</span> <span className="font-semibold">{stats.counts.threeTimes}</span></div>
+                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#6b7280]"></span>2x</span> <span className="font-semibold">{stats.counts.twice}</span></div>
+                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#9ca3af]"></span>1x</span> <span className="font-semibold">{stats.counts.once}</span></div>
+                   <div className="flex justify-between items-center"><span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#e5e7eb]"></span>0x</span> <span className="font-semibold text-gray-400">{stats.counts.didNotBrush}</span></div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            
-            <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
-               <Target size={48} className="absolute -top-2 -right-2 text-gray-100 opacity-50" />
-               <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-2">3x a Day Goal</h3>
-               <div className="text-3xl font-bold text-gray-800">{stats.goal3xPercent}%</div>
-               <p className="text-xs text-gray-400 mt-1">Days hit target</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
-               <TrendingUp size={48} className="absolute -top-2 -right-2 text-gray-100 opacity-50" />
-               <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-2">Max Streak</h3>
-               <div className="text-3xl font-bold text-gray-800">{stats.maxStreak}</div>
-               <p className="text-xs text-gray-400 mt-1">Days in a row</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
-               <Award size={48} className="absolute -top-2 -right-2 text-emerald-50 opacity-50" />
-               <h3 className="text-emerald-600/70 font-medium text-xs uppercase tracking-wider mb-2">Best Day</h3>
-               <div className="text-xl font-bold text-emerald-700">{stats.bestDay.name}</div>
-               <p className="text-xs text-emerald-600/70 mt-1">{stats.bestDay.count} hit</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
-               <AlertCircle size={48} className="absolute -top-2 -right-2 text-rose-50 opacity-50" />
-               <h3 className="text-rose-400 font-medium text-xs uppercase tracking-wider mb-2">Most Missed</h3>
-               <div className="text-xl font-bold text-rose-600">{stats.mostMissed.name}</div>
-               <p className="text-xs text-rose-400 mt-1">{stats.mostMissed.count} missed</p>
-            </div>
-
-          </div>
-
-          {stats.monthlyData.length > 1 && (
-            <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-              <h3 className="text-gray-500 font-medium text-sm mb-6">Monthly Trends</h3>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stats.monthlyData} margin={{ top: 15, right: 0, left: -25, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#9ca3af" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} width={40} />
-                    <Tooltip cursor={false} contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}}/>
-                    <Area 
-                      type="monotone" 
-                      dataKey="total" 
-                      stroke="#9ca3af" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorTotal)" 
-                      activeDot={{r: 6, fill: '#4b5563', strokeWidth: 0}}
-                      label={{ fill: '#6b7280', fontSize: 10, position: 'top', dy: -5 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+            <div className="grid grid-cols-2 gap-4">
+              
+              <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
+                 <Target size={48} className="absolute -top-2 -right-2 text-gray-100 opacity-50" />
+                 <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-2">3x a Day Goal</h3>
+                 <div className="text-3xl font-bold text-gray-800">{stats.goal3xPercent}%</div>
+                 <p className="text-xs text-gray-400 mt-1">Days hit target</p>
               </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium ml-4">
-                {stats.monthlyData.map(d => (
-                    <span key={d.name}>{d.name}</span>
+
+              <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
+                 <TrendingUp size={48} className="absolute -top-2 -right-2 text-gray-100 opacity-50" />
+                 <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider mb-2">Max Streak</h3>
+                 <div className="text-3xl font-bold text-gray-800">{stats.maxStreak}</div>
+                 <p className="text-xs text-gray-400 mt-1">Days in a row</p>
+              </div>
+
+              <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
+                 <Award size={48} className="absolute -top-2 -right-2 text-emerald-50 opacity-50" />
+                 <h3 className="text-emerald-600/70 font-medium text-xs uppercase tracking-wider mb-2">Best Day</h3>
+                 <div className="text-xl font-bold text-emerald-700">{stats.bestDay.name}</div>
+                 <p className="text-xs text-emerald-600/70 mt-1">{stats.bestDay.count} hit</p>
+              </div>
+
+              <div className="bg-white p-5 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between relative overflow-hidden">
+                 <AlertCircle size={48} className="absolute -top-2 -right-2 text-rose-50 opacity-50" />
+                 <h3 className="text-rose-400 font-medium text-xs uppercase tracking-wider mb-2">Most Missed</h3>
+                 <div className="text-xl font-bold text-rose-600">{stats.mostMissed.name}</div>
+                 <p className="text-xs text-rose-400 mt-1">{stats.mostMissed.count} missed</p>
+              </div>
+
+            </div>
+
+            {stats.monthlyData.length > 1 && (
+              <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <h3 className="text-gray-500 font-medium text-sm mb-6">Monthly Trends</h3>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={stats.monthlyData} margin={{ top: 15, right: 0, left: -25, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#9ca3af" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} width={40} />
+                      <Tooltip cursor={false} contentStyle={{borderRadius:'10px', border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.1)'}}/>
+                      <Area 
+                        type="monotone" 
+                        dataKey="total" 
+                        stroke="#9ca3af" 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill="url(#colorTotal)" 
+                        activeDot={{r: 6, fill: '#4b5563', strokeWidth: 0}}
+                        label={{ fill: '#6b7280', fontSize: 10, position: 'top', dy: -5 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium ml-4">
+                  {stats.monthlyData.map(d => (
+                      <span key={d.name}>{d.name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+           </>
+        )}
+
+        {/* Historical Comparison */}
+        {stats.historicalPeriods && stats.historicalPeriods.length > 0 && (
+          <div className="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+             <div className="flex items-center gap-2 mb-6 text-gray-500">
+               <History size={18} />
+               <h3 className="font-medium text-sm">Historical Comparison</h3>
+             </div>
+             
+             <div className="space-y-4">
+                {stats.historicalPeriods.map((p, idx) => (
+                   <div key={idx} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
+                      <div className="flex justify-between items-end mb-2">
+                         <span className="font-semibold text-gray-800">{p.label}</span>
+                         <span className={`text-xs font-bold px-2 py-1 rounded-md ${p.brushedPercent >= 90 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {p.brushedPercent}% Brushed
+                         </span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                         <span>3x Goal: <strong className="text-gray-700">{p.goal3xPercent}%</strong></span>
+                         <span>Streak: <strong className="text-gray-700">{p.maxStreak}</strong></span>
+                         <span>Missed: <strong className="text-gray-700">{p.mostMissed}</strong></span>
+                      </div>
+                   </div>
                 ))}
-              </div>
-            </div>
-          )}
+             </div>
+          </div>
+        )}
 
-        </div>
-      )}
+      </div>
     </div>
   );
 }
