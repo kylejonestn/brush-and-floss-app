@@ -225,7 +225,11 @@ function App() {
         const localData = localDataStr ? JSON.parse(localDataStr) : [];
         
         const mergedMap = new Map();
-        [...remoteRecords, ...localData].forEach(r => mergedMap.set(r.timestamp, r));
+        [...remoteRecords, ...localData].forEach(r => {
+            const t = new Date(r.timestamp).getTime();
+            const key = isNaN(t) ? r.timestamp : t;
+            mergedMap.set(key, r);
+        });
         const mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         let nextDates = customDateRange;
@@ -288,7 +292,11 @@ function App() {
 
   const mergeAndSaveData = async (newRecordsToMerge) => {
     const mergedMap = new Map();
-    [...records, ...newRecordsToMerge].forEach(r => mergedMap.set(r.timestamp, r));
+    [...records, ...newRecordsToMerge].forEach(r => {
+      const t = new Date(r.timestamp).getTime();
+      const key = isNaN(t) ? r.timestamp : t;
+      mergedMap.set(key, r);
+    });
     const mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     saveAndSyncRecords(mergedData);
   };
