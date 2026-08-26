@@ -8,6 +8,23 @@ import { initDriveSync, readDriveFile, writeDriveFile } from './utils/driveSync'
 import { ENCOURAGING_PHRASES } from './utils/phrases';
 import { format, parseISO } from 'date-fns';
 
+const deduplicateRecords = (recordsArr) => {
+  const cleaned = [];
+  for (const record of recordsArr) {
+    if (cleaned.length === 0) {
+      cleaned.push(record);
+    } else {
+      const lastRecord = cleaned[cleaned.length - 1];
+      const lastTime = new Date(lastRecord.timestamp).getTime();
+      const currTime = new Date(record.timestamp).getTime();
+      if (currTime - lastTime > 300000) {
+        cleaned.push(record);
+      }
+    }
+  }
+  return cleaned;
+};
+
 function App() {
   const [profile, setProfile] = useState(null);
   const [records, setRecords] = useState([]);
@@ -230,7 +247,8 @@ function App() {
             const key = isNaN(t) ? r.timestamp : t;
             mergedMap.set(key, r);
         });
-        const mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        let mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        mergedData = deduplicateRecords(mergedData);
 
         let nextDates = customDateRange;
         let nextPeriods = customPeriods;
@@ -284,6 +302,8 @@ function App() {
     syncData();
   }, [accessToken, cloudSyncEnabled]);
 
+
+
   const saveAndSyncRecords = async (newRecordsArray) => {
     setRecords(newRecordsArray);
     localStorage.setItem('brush_records', JSON.stringify(newRecordsArray));
@@ -297,7 +317,8 @@ function App() {
       const key = isNaN(t) ? r.timestamp : t;
       mergedMap.set(key, r);
     });
-    const mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    let mergedData = Array.from(mergedMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    mergedData = deduplicateRecords(mergedData);
     saveAndSyncRecords(mergedData);
   };
 
