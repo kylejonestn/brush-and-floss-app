@@ -23,7 +23,9 @@ export default function Settings({
   globalCurrentStreak = 0,
   customBackgroundUrl = '',
   onUpdateCustomBackground,
-  unlockedBackgrounds = []
+  unlockedBackgrounds = [],
+  onForcePull,
+  onForcePush
 }) {
   const [showBulkManager, setShowBulkManager] = useState(false);
   const fileInputRef = useRef(null);
