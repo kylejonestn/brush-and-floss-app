@@ -1,44 +1,23 @@
-@import "tailwindcss";
+const fs = require('fs');
+let file = fs.readFileSync('src/index.css', 'utf8');
 
-body {
-  background-color: #e5e7eb;
-}
-
-@media print {
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  
-  body {
-    background-color: white !important;
-  }
-  #export-pdf-area {
-    box-shadow: none !important;
-    max-width: 100% !important;
-    background-color: white !important;
-    padding-bottom: 0 !important;
-    min-height: auto !important;
-  }
-  .pb-32 {
-    padding-bottom: 0 !important;
-  }
-  /* Hide Bottom Nav on Print */
-  nav, .fixed.bottom-0 {
-    display: none !important;
-  }
-}
-
+const newCSS = \`
 @keyframes shimmer-bg {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-.bg-shimmer-emerald {
-  background: linear-gradient(270deg, #d1fae5, #a7f3d0, #d1fae5);
+.bg-shimmer-gold {
+  background: linear-gradient(270deg, #fef08a, #fde047, #fef08a);
   background-size: 200% 200%;
   animation: shimmer-bg 3s ease infinite;
-  color: #065f46;
+  color: #854d0e; /* text-yellow-800 */
+}
+.bg-shimmer-emerald {
+  background: linear-gradient(270deg, #a7f3d0, #6ee7b7, #a7f3d0);
+  background-size: 200% 200%;
+  animation: shimmer-bg 3s ease infinite;
+  color: #065f46; /* text-emerald-800 */
 }
 @keyframes float {
   0% { transform: translateY(0px) rotate(0deg); }
@@ -56,3 +35,7 @@ body {
 .animate-float-delay {
   animation: float-delay 2.5s ease-in-out infinite;
 }
+\`;
+
+file = file + '\\n' + newCSS;
+fs.writeFileSync('src/index.css', file);
