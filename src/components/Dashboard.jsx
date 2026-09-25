@@ -3,7 +3,7 @@ import {
   BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis 
 } from 'recharts';
 import { parseISO, format, differenceInDays, startOfDay, endOfDay, subDays, isToday, isYesterday, isAfter, isBefore } from 'date-fns';
-import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw, History, Sparkles } from 'lucide-react';
+import { Award, AlertCircle, Target, TrendingUp, Cloud, CloudOff, RefreshCw, History, Sparkles, Crown } from 'lucide-react';
 import { THEMES } from '../utils/themes';
 import { ENCOURAGING_PHRASES } from '../utils/phrases';
 
@@ -586,12 +586,13 @@ export default function Dashboard({ records, userName, themeIndex = 0, phraseInd
                   return stats.historicalPeriods.map((p, idx) => {
                    const isHighest = p.brushedPercent === highestHistoricalPercent && highestHistoricalPercent > 0;
                    return (
-                   <div key={idx} className={"border-b " + (isHighest ? 'border-emerald-100 bg-emerald-50/50 p-3 -mx-3 rounded-xl shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]' : 'border-gray-100') + " last:border-0 pb-4 last:pb-0"}>
+                   <div key={idx} className={"border-b " + (isHighest ? 'border-emerald-100 bg-gradient-to-r from-emerald-50/80 to-teal-50/80 p-4 -mx-4 rounded-xl animate-glow-pulse animate-sweep' : 'border-gray-100') + " last:border-0 pb-4 last:pb-0"}>
                       <div className="flex justify-between items-center mb-2">
-                         <span className={"font-semibold " + (isHighest ? 'text-emerald-800 flex items-center gap-2' : 'text-gray-800')}>
+                         <span className={"font-semibold " + (isHighest ? 'text-emerald-900 flex items-center gap-2 text-base' : 'text-gray-800')}>
+                           {isHighest && <Crown size={18} className="animate-crown drop-shadow-sm" />}
                            {p.label}
                            {isHighest && (
-                             <div className="flex text-emerald-400">
+                             <div className="flex text-emerald-400 drop-shadow-sm">
                                <Sparkles size={14} className="animate-float" />
                                <Sparkles size={10} className="animate-float-delay -ml-1 mt-1 opacity-70" />
                              </div>
