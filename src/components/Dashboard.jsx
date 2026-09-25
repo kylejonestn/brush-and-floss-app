@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis 
 } from 'recharts';
@@ -9,6 +9,18 @@ import { ENCOURAGING_PHRASES } from '../utils/phrases';
 
 export default function Dashboard({ records, userName, themeIndex = 0, phraseIndex = 0, syncStatus, onLogin, customDateRange, customPeriods, cloudSyncEnabled = true, unlockedBackgrounds = ['bg1'], globalCurrentStreak = 0, customBackgroundUrl = '' }) {
   const [timeframe, setTimeframe] = useState('Week');
+  const [hasAutoSet, setHasAutoSet] = useState(false);
+
+  useEffect(() => {
+    if (!hasAutoSet) {
+      const hasDates = customDateRange?.start || customDateRange?.end;
+      const hasPeriods = customPeriods && customPeriods.length > 0;
+      if (hasDates || hasPeriods) {
+        setTimeframe('Custom');
+        setHasAutoSet(true);
+      }
+    }
+  }, [customDateRange, customPeriods, hasAutoSet]);
 
   const activeBgStyle = useMemo(() => {
     if (globalCurrentStreak >= 15 && customBackgroundUrl) {
